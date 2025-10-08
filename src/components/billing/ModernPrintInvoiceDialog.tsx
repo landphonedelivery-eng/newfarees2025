@@ -75,7 +75,7 @@ const CURRENCIES = [
   { code: 'EUR', name: 'يورو', symbol: '€', writtenName: 'يورو' },
 ];
 
-// ✅ دا��ة تنسيق الأرقام العربية
+// ✅ دالة تنسيق الأرقام العربية
 const formatArabicNumber = (num: number): string => {
   if (isNaN(num) || num === null || num === undefined) return '0';
   
@@ -451,7 +451,7 @@ export default function ModernPrintInvoiceDialog({
       try {
         const testWindow = window.open('', '_blank', 'width=1,height=1');
         if (!testWindow || testWindow.closed || typeof testWindow.closed === 'undefined') {
-          toast.error('يرجى السماح بالنوافذ المنبثقة في المتصفح لتمكين الطباعة');
+          toast.error('ي��جى السماح بالنوافذ المنبثقة في المتصفح لتمكين الطباعة');
           return;
         }
         testWindow.close();
@@ -732,7 +732,7 @@ export default function ModernPrintInvoiceDialog({
                 <div class="invoice-info">
                   <div class="invoice-title">INVOICE</div>
                   <div class="invoice-details">
-                    رقم الفاتورة: ${invoiceNumber}<br>
+                    رقم ��لفاتورة: ${invoiceNumber}<br>
                     التاريخ: ${formattedDate}<br>
                     العملة: ${currency.name}
                   </div>
@@ -858,12 +858,43 @@ export default function ModernPrintInvoiceDialog({
     printInvoice();
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (localPrintItems.length === 0) {
       toast.error('لا توجد عناصر للحفظ');
       return;
     }
-    onSaveInvoice();
+
+    try {
+      const totalAmount = localPrintItems.reduce((s, it) => s + (Number(it.totalPrice) || 0), 0);
+      const payload: any = {
+        customer_id: customerId || null,
+        customer_name: customerName,
+        contract_numbers: selectedContracts.join(','),
+        print_items: JSON.stringify(localPrintItems),
+        total_amount: totalAmount,
+        invoice_number: invoiceNumber,
+        invoice_date: invoiceDate,
+        notes: notes || '',
+        currency: currency.code,
+        discount: discount || 0,
+        discount_type: discountType,
+        created_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase.from('printed_invoices').insert(payload).select();
+      if (error) {
+        console.error('Failed to save printed invoice:', error);
+        toast.error('فشل حفظ الفاتورة');
+        return;
+      }
+
+      toast.success('تم حفظ الفاتورة بنجاح');
+      // call parent callback to finalize
+      onSaveInvoice();
+    } catch (e) {
+      console.error('Error saving printed invoice:', e);
+      toast.error('خطأ أثناء حفظ الفاتورة');
+    }
   };
 
   const InvoicePreview = () => (
