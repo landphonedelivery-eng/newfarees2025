@@ -70,7 +70,7 @@ interface ModernPrintInvoiceDialogProps {
 }
 
 const CURRENCIES = [
-  { code: 'LYD', name: 'دينار ليبي', symbol: 'د.ل', writtenName: 'دينار ��يبي' },
+  { code: 'LYD', name: 'دينار ليبي', symbol: 'د.ل', writtenName: 'دينار ليبي' },
   { code: 'USD', name: 'دولار أمريكي', symbol: '$', writtenName: 'دو��ار أمريكي' },
   { code: 'EUR', name: 'يورو', symbol: '€', writtenName: 'يورو' },
 ];
@@ -404,10 +404,11 @@ export default function ModernPrintInvoiceDialog({
   };
 
   useEffect(() => {
-    if (open && Object.keys(sizeDimensionsMap).length > 0) {
+    // If we're editing an existing saved invoice (initialInvoice), do not override its items
+    if (open && Object.keys(sizeDimensionsMap).length > 0 && !initialInvoice) {
       getBillboardsFromContracts(selectedContracts);
     }
-  }, [selectedContracts, open, contracts, sizeDimensionsMap]);
+  }, [selectedContracts, open, contracts, sizeDimensionsMap, initialInvoice]);
 
   const handleContractToggle = (contractNumber: string) => {
     const isSelected = selectedContracts.includes(contractNumber);
@@ -837,7 +838,7 @@ export default function ModernPrintInvoiceDialog({
               </div>
               
               <div class="footer">
-                شكراً لتعام��كم معنا | Thank you for your business<br>
+                شكراً لتعاملكم معنا | Thank you for your business<br>
                 هذه فاتورة إلكترونية ولا تحتاج إلى ختم أو توقيع
               </div>
             </div>
@@ -1051,7 +1052,7 @@ export default function ModernPrintInvoiceDialog({
               </div>
 
               <div className="text-center mt-4 text-sm text-muted-foreground">
-                المبلغ بالكلم��ت: {formatArabicNumber(total)} {currency.writtenName}
+                المبلغ بالكلمات: {formatArabicNumber(total)} {currency.writtenName}
               </div>
             </div>
           </div>
@@ -1418,7 +1419,7 @@ export default function ModernPrintInvoiceDialog({
               disabled={localPrintItems.length === 0}
             >
               <Printer className="h-4 w-4" />
-              طباعة الفاتور��
+              طباعة الفاتورة
             </Button>
           </div>
         </div>
