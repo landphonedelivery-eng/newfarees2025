@@ -76,7 +76,7 @@ const CURRENCIES = [
   { code: 'EUR', name: 'يورو', symbol: '€', writtenName: 'يورو' },
 ];
 
-// ✅ دالة تنسيق الأرقام العربية
+// ✅ دالة تنسيق الأرقام ال��ربية
 const formatArabicNumber = (num: number): string => {
   if (isNaN(num) || num === null || num === undefined) return '0';
   
@@ -380,7 +380,7 @@ export default function ModernPrintInvoiceDialog({
       groupedBillboards[groupKey].totalArea += area;
     });
 
-    // ✅ حساب الأسعار الإج��الية وترتيب النتائج
+    // ✅ حساب الأسعار الإج��الية و��رتيب النتائج
     const result = Object.values(groupedBillboards).map(item => {
       // ✅ الحساب الصحيح: العرض × الارتفاع × عدد الأوجه × سعر المتر
       const calculatedPrice = item.width * item.height * item.totalFaces * item.pricePerMeter;
@@ -808,7 +808,8 @@ export default function ModernPrintInvoiceDialog({
                         <td>${isEmpty ? '' : (typeof item.faces === 'number' ? item.faces : item.faces)}</td>
                         <td>${isEmpty ? '' : (typeof item.totalFaces === 'number' ? formatArabicNumber(item.totalFaces) : item.totalFaces)}</td>
                         <td>${isEmpty ? '' : (typeof item.width === 'number' && typeof item.height === 'number' ? `${item.width} × ${item.height}` : '')}</td>
-                        <td>${isEmpty ? '' : (typeof item.area === 'number' && typeof item.totalFaces === 'number' ? `${(item.area * item.totalFaces).toFixed(2)} م²` : item.area)}</td>
+                        <td>${isEmpty ? '' : `${totalAreaForFaces.toFixed(2)} م²`}</td>
+                        ${!isPrinterCopy ? `<td>${isEmpty ? '' : formatArabicNumber(pricePerMeterVal)} ${currency.symbol}</td><td>${isEmpty ? '' : formatArabicNumber(itemTotalPriceVal)} ${currency.symbol}</td>` : ''}
                       </tr>
                     `;
                   }).join('')}
@@ -946,7 +947,7 @@ export default function ModernPrintInvoiceDialog({
       if (error) {
         console.error('Failed to save printed invoice:', error);
         const errMsg = (error && (error.message || error.code)) ? `${error.message || error.code}` : JSON.stringify(error);
-        toast.error(`فشل حفظ الفاتورة: ${errMsg}`);
+        toast.error(`فشل حفظ ال��اتورة: ${errMsg}`);
         return;
       }
 
@@ -1037,7 +1038,7 @@ export default function ModernPrintInvoiceDialog({
           <div className="flex justify-end">
             <div className="w-[400px]">
               <div className="flex justify-between py-2 text-sm">
-                <span>المجموع الفرعي:</span>
+                <span>المجموع ا��فرعي:</span>
                 <span className="expenses-amount-calculated font-bold">{formatArabicNumber(moneySubtotal)} {currency.symbol}</span>
               </div>
 
@@ -1302,7 +1303,7 @@ export default function ModernPrintInvoiceDialog({
                       <div className="expenses-empty-state py-12">
                         <Calculator className="h-16 w-16 mx-auto mb-4 opacity-50" />
                         <p className="text-lg">لا توجد عناصر للطباعة</p>
-                        <p className="text-sm">لم يتم العثور على لوحات مرتبطة بالعقود المحددة</p>
+                        <p className="text-sm">لم يتم العثور على لوحات مرتبطة ��العقود المحددة</p>
                       </div>
                     ) : (
                       <div className="space-y-4">
