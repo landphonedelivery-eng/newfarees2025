@@ -122,7 +122,8 @@ export default function ModernPrintInvoiceDialog({
   const [notes, setNotes] = useState('');
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
-  
+  const [invoiceType, setInvoiceType] = useState<'print_only' | 'print_install' | 'install_only'>('print_only');
+
   const [localPrintItems, setLocalPrintItems] = useState<PrintItem[]>([]);
   const [sizeOrderMap, setSizeOrderMap] = useState<{ [key: string]: number }>({});
   const [sizeDimensionsMap, setSizeDimensionsMap] = useState<{ [key: string]: { width: number; height: number } }>({});
@@ -473,12 +474,14 @@ export default function ModernPrintInvoiceDialog({
         const currentDate = new Date(invoiceDate);
         const formattedDate = currentDate.toLocaleDateString('ar-LY');
         
-        // ✅ إنشاء اسم الملف مع معلومات العميل و��لعقود والتاريخ
+        // ✅ إنشاء اسم الملف مع معلومات العميل و العقود والتاريخ
         const contractsList = selectedContracts.join('-');
         const dateFormatted = currentDate.toISOString().slice(0, 10).replace(/-/g, '_');
         const customerNameForFile = customerName.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '_');
-        const fileName = `فاتورة_طباعة_${customerNameForFile}_عقود_${contractsList}_${dateFormatted}`;
-        
+        const invoiceTypeText = invoiceType === 'print_only' ? 'طباعة فقط' : invoiceType === 'print_install' ? 'طباعة وتركيب' : 'تركيب فقط';
+        const invoiceTypeCode = invoiceType === 'print_only' ? 'print' : invoiceType === 'print_install' ? 'print_install' : 'install';
+        const fileName = `فاتورة_${invoiceTypeCode}_${customerNameForFile}_عقود_${contractsList}_${dateFormatted}`;
+
         // ✅ إعداد عناصر الجدول مع صفوف ثابتة
         const FIXED_ROWS = 10;
         const displayItems = [...localPrintItems];
@@ -520,7 +523,7 @@ export default function ModernPrintInvoiceDialog({
 
           const html = generateModernPrintInvoiceHTML({
             invoiceNumber,
-            invoiceType: 'فاتورة طباعة',
+            invoiceType: invoiceTypeText,
             invoiceDate,
             customerName,
             items: itemsForGenerator,
@@ -788,7 +791,7 @@ export default function ModernPrintInvoiceDialog({
                 </div>
                 
                 <div class="invoice-info">
-                  <div class="invoice-title">INVOICE</div>
+                  <div class="invoice-title">${invoiceTypeText || 'INVOICE'}</div>
                   <div class="invoice-details">
                     رقم ��لفاتورة: ${invoiceNumber}<br>
                     التاريخ: ${formattedDate}<br>
@@ -951,7 +954,7 @@ export default function ModernPrintInvoiceDialog({
         currency_code: currency?.code || null,
         currency_symbol: currency?.symbol || null,
         include_account_balance: includeAccountBalance ? true : false,
-        invoice_type: 'print',
+        invoice_type: (invoiceType === 'print_only' ? 'print' : invoiceType === 'print_install' ? 'print_install' : 'install'),
         created_at: new Date().toISOString()
       };
 
@@ -996,7 +999,7 @@ export default function ModernPrintInvoiceDialog({
 
       {/* Customer Info */}
       <div className="expenses-preview-item mb-6 p-4 border-r-4 border-primary">
-        <h3 className="expenses-preview-label mb-3 text-lg">بيانات العميل</h3>
+        <h3 className="expenses-preview-label mb-3 text-lg">بيانات ال��ميل</h3>
         <div className="text-sm space-y-1">
           <div><strong>الاسم:</strong> {customerName}</div>
           <div><strong>العقود المرتبط��:</strong> {selectedContracts.join(', ')}</div>
@@ -1175,6 +1178,19 @@ export default function ModernPrintInvoiceDialog({
                             {curr.name} ({curr.symbol})
                           </option>
                         ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="expenses-form-label mb-2 block text-sm">نوع الفاتورة</label>
+                      <select
+                        value={invoiceType}
+                        onChange={(e) => setInvoiceType(e.target.value as any)}
+                        className="w-full p-3 h-10 border border-border rounded-md text-right bg-input text-foreground text-sm"
+                      >
+                        <option value="print_only">طباعة فقط</option>
+                        <option value="print_install">طباعة وتركيب</option>
+                        <option value="install_only">تركيب فقط</option>
                       </select>
                     </div>
 
