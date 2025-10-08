@@ -1000,19 +1000,27 @@ export default function ModernPrintInvoiceDialog({
                   <th className="border border-border p-3 text-center font-bold">إجمالي الأوجه</th>
                   <th className="border border-border p-3 text-center font-bold">الأبعاد (م)</th>
                   <th className="border border-border p-3 text-center font-bold">المساحة/الوجه</th>
+                  <th className="border border-border p-3 text-center font-bold">سعر المتر ({currency.symbol})</th>
+                  <th className="border border-border p-3 text-center font-bold">الإجمالي ({currency.symbol})</th>
                 </tr>
               </thead>
               <tbody>
-                {localPrintItems.map((item, index) => (
-                  <tr key={index} className={index % 2 === 0 ? 'bg-card/50' : 'bg-background'}>
-                    <td className="border border-border p-3 text-center font-medium">{item.size}</td>
-                    <td className="border border-border p-3 text-center">{formatArabicNumber(item.quantity)}</td>
-                    <td className="border border-border p-3 text-center">{formatArabicNumber(item.faces)}</td>
-                    <td className="border border-border p-3 text-center font-medium">{formatArabicNumber(item.totalFaces)}</td>
-                    <td className="border border-border p-3 text-center">{item.width} × {item.height}</td>
-                    <td className="border border-border p-3 text-center">{item.area.toFixed(2)} م²</td>
-                  </tr>
-                ))}
+                {localPrintItems.map((item, index) => {
+                  const pricePerMeterVal = Number(item.pricePerMeter) || 0;
+                  const itemTotalPriceVal = Number(item.totalPrice) || ((Number(item.width) || 0) * (Number(item.height) || 0) * (Number(item.totalFaces) || 0) * pricePerMeterVal);
+                  return (
+                    <tr key={index} className={index % 2 === 0 ? 'bg-card/50' : 'bg-background'}>
+                      <td className="border border-border p-3 text-center font-medium">{item.size}</td>
+                      <td className="border border-border p-3 text-center">{formatArabicNumber(item.quantity)}</td>
+                      <td className="border border-border p-3 text-center">{formatArabicNumber(item.faces)}</td>
+                      <td className="border border-border p-3 text-center font-medium">{formatArabicNumber(item.totalFaces)}</td>
+                      <td className="border border-border p-3 text-center">{item.width} × {item.height}</td>
+                      <td className="border border-border p-3 text-center">{(Number(item.area) || 0).toFixed(2)} م²</td>
+                      <td className="border border-border p-3 text-center">{formatArabicNumber(pricePerMeterVal)} {currency.symbol}</td>
+                      <td className="border border-border p-3 text-center font-medium">{formatArabicNumber(itemTotalPriceVal)} {currency.symbol}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
