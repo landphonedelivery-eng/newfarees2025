@@ -147,6 +147,7 @@ export const generateModernPrintInvoiceHTML = (data: ModernPrintInvoiceData): st
         </tbody>
       </table>
 
+      ${data.hidePrices ? `
       <div class="totals">
         <div class="box">
           <div style="display:flex;justify-content:space-between;font-weight:700;font-size:16px">
@@ -155,6 +156,17 @@ export const generateModernPrintInvoiceHTML = (data: ModernPrintInvoiceData): st
           </div>
         </div>
       </div>
+      ` : `
+      <div class="totals">
+        <div class="box">
+          <div style="display:flex;justify-content:space-between;font-weight:700;font-size:16px">
+            <div>المجموع الإجمالي:</div>
+            <div style="direction:ltr">${data.totalAmount.toLocaleString('ar-LY')} د.ل</div>
+          </div>
+          <div style="margin-top:8px">المبلغ بالكلمات: ${data.totalAmount ? numberToArabicWords(Number(data.totalAmount)) : ''} ${data.totalAmount ? 'د.ل' : ''}</div>
+        </div>
+      </div>
+      `}
 
       <div class="notes">${data.notes || ''}</div>
 
@@ -185,7 +197,7 @@ export const numberToArabicWords = (num: number): string => {
   if (num < 1000) {
     const hundred = Math.floor(num / 100);
     const remainder = num % 100;
-    return ones[hundred] + ' مائة' + (remainder > 0 ? ' ��' + numberToArabicWords(remainder) : '');
+    return ones[hundred] + ' مائة' + (remainder > 0 ? ' و' + numberToArabicWords(remainder) : '');
   }
   if (num < 1000000) {
     const thousand = Math.floor(num / 1000);
