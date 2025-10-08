@@ -128,7 +128,7 @@ export default function ModernPrintInvoiceDialog({
   const [sizeOrderMap, setSizeOrderMap] = useState<{ [key: string]: number }>({});
   const [sizeDimensionsMap, setSizeDimensionsMap] = useState<{ [key: string]: { width: number; height: number } }>({});
 
-  // ✅ جلب بيانات الأحجام من قا��دة البيانات مع الأبعاد
+  // ✅ جلب بيانات الأحجام من قا��دة ال��يانات مع الأبعاد
   const fetchSizeData = async () => {
     try {
       const { data: sizesData, error } = await supabase
@@ -465,7 +465,7 @@ export default function ModernPrintInvoiceDialog({
       return;
     }
 
-    // ✅ استخدام نفس تصميم الفاتورة من الكود المرجعي
+    // ✅ استخدام نفس تصميم الفاتور�� من الكود المرجعي
     const printInvoice = async () => {
       try {
         const testWindow = window.open('', '_blank', 'width=1,height=1');
@@ -787,7 +787,8 @@ export default function ModernPrintInvoiceDialog({
                     <th style="width: 12%">أوجه/لوحة</th>
                     <th style="width: 12%">إجمالي الأوجه</th>
                     <th style="width: 18%">الأبعاد (م)</th>
-                    <th style="width: 10%">مساحة الأوجه (م��)</th>
+                    <th style="width: 10%">مساحة الأوجه (م²)</th>
+                    ${!isPrinterCopy ? `<th style="width:12%">سعر المتر (${currency.symbol})</th><th style="width:12%">السعر الإجمالي (${currency.symbol})</th>` : ''}
                   </tr>
                 </thead>
                 <tbody>
