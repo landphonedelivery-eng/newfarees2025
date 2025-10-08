@@ -70,7 +70,7 @@ interface ModernPrintInvoiceDialogProps {
 }
 
 const CURRENCIES = [
-  { code: 'LYD', name: 'دينار ليبي', symbol: 'د.ل', writtenName: 'دينار ليبي' },
+  { code: 'LYD', name: 'دينار ليبي', symbol: 'د.ل', writtenName: 'دينار ��يبي' },
   { code: 'USD', name: 'دولار أمريكي', symbol: '$', writtenName: 'دو��ار أمريكي' },
   { code: 'EUR', name: 'يورو', symbol: '€', writtenName: 'يورو' },
 ];
@@ -202,9 +202,12 @@ export default function ModernPrintInvoiceDialog({
       if (initialInvoice) {
         try {
           const inv = initialInvoice as any;
+          console.log('ModernPrintInvoiceDialog: initialInvoice received:', inv);
           // parse print items from multiple possible fields (print_items, print_items_json, items, items_json)
           let items: any[] = [];
           const possible = inv.print_items ?? inv.print_items_json ?? inv.items ?? inv.items_json ?? null;
+
+          console.log('ModernPrintInvoiceDialog: possible items field:', possible ? typeof possible : 'none');
 
           if (possible) {
             try {
@@ -222,7 +225,7 @@ export default function ModernPrintInvoiceDialog({
             }
           }
 
-          setLocalPrintItems((items || []).map((it:any) => ({
+          const mapped = (items || []).map((it:any) => ({
             size: it.size || it.name || '',
             quantity: Number(it.quantity ?? it.qty ?? 0) || 0,
             faces: Number(it.faces ?? it.face_count ?? it.Number_of_Faces ?? 0) || 0,
@@ -234,7 +237,11 @@ export default function ModernPrintInvoiceDialog({
             sortOrder: Number(it.sortOrder ?? it.sort_order ?? 0) || 0,
             width: Number(it.width || it.w || 0) || 0,
             height: Number(it.height || it.h || 0) || 0,
-          })));
+          }));
+
+          console.log('ModernPrintInvoiceDialog: parsed items count:', mapped.length, mapped);
+
+          setLocalPrintItems(mapped);
 
           if (inv.invoice_number) setInvoiceNumber(inv.invoice_number);
           if (inv.invoice_date) setInvoiceDate(typeof inv.invoice_date === 'string' ? inv.invoice_date.slice(0,10) : new Date(inv.invoice_date).toISOString().slice(0,10));
@@ -830,7 +837,7 @@ export default function ModernPrintInvoiceDialog({
               </div>
               
               <div class="footer">
-                شكراً لتعاملكم معنا | Thank you for your business<br>
+                شكراً لتعام��كم معنا | Thank you for your business<br>
                 هذه فاتورة إلكترونية ولا تحتاج إلى ختم أو توقيع
               </div>
             </div>
@@ -1044,7 +1051,7 @@ export default function ModernPrintInvoiceDialog({
               </div>
 
               <div className="text-center mt-4 text-sm text-muted-foreground">
-                المبلغ بالكلمات: {formatArabicNumber(total)} {currency.writtenName}
+                المبلغ بالكلم��ت: {formatArabicNumber(total)} {currency.writtenName}
               </div>
             </div>
           </div>
@@ -1411,7 +1418,7 @@ export default function ModernPrintInvoiceDialog({
               disabled={localPrintItems.length === 0}
             >
               <Printer className="h-4 w-4" />
-              طباعة الفاتورة
+              طباعة الفاتور��
             </Button>
           </div>
         </div>
