@@ -380,9 +380,9 @@ export default function ModernPrintInvoiceDialog({
       groupedBillboards[groupKey].totalArea += area;
     });
 
-    // ✅ حساب الأسعار الإج��الية وترتيب النتائج
+    // ✅ حساب الأسع��ر الإج��الية وترتيب النتائج
     const result = Object.values(groupedBillboards).map(item => {
-      // ✅ الحساب الصحيح: العرض × الارتفاع × عدد الأوجه × سعر المتر
+      // ✅ الحساب الصحيح: العرض × الارتفاع × عدد ال��وجه × سعر المتر
       const calculatedPrice = item.width * item.height * item.totalFaces * item.pricePerMeter;
       
       console.log(`Processing item ${item.size}: ${item.width} × ${item.height} × ${item.totalFaces} × ${item.pricePerMeter} = ${calculatedPrice}`);
@@ -459,7 +459,7 @@ export default function ModernPrintInvoiceDialog({
     setLocalPrintItems(updatedItems);
   };
 
-  const handlePrint = () => {
+  const handlePrint = (isPrinterCopyParam: boolean = false) => {
     if (localPrintItems.length === 0) {
       toast.error('لا توجد عناصر للطباعة');
       return;
@@ -1168,7 +1168,7 @@ export default function ModernPrintInvoiceDialog({
                           className="text-right text-sm p-3 h-10 bg-muted cursor-not-allowed"
                           title="رقم الفاتورة يتم توليده تلقائياً"
                         />
-                        <p className="text-xs text-muted-foreground mt-1">يتم توليد رقم الفاتورة تلقائياً</p>
+                        <p className="text-xs text-muted-foreground mt-1">يتم توليد ��قم الفاتورة تلقائياً</p>
                       </div>
                       <div>
                         <label className="expenses-form-label mb-2 block text-sm">التاريخ</label>
