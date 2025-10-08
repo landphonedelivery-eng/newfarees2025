@@ -509,7 +509,7 @@ export default function CustomerBilling() {
     // Ensure print_items is parsed (it might be stored as a JSON string)
     let editable = invoice as any;
     try {
-      const raw = (invoice as any).print_items ?? (invoice as any).print_items_json ?? null;
+      const raw = (invoice as any).print_items ?? (invoice as any).print_items_json ?? (invoice as any).items ?? (invoice as any).items_json ?? null;
       if (raw && typeof raw === 'string') {
         try { editable = { ...editable, print_items: JSON.parse(raw) }; } catch (e) { /* ignore parse error */ }
       } else if (raw && Array.isArray(raw)) {
@@ -518,6 +518,7 @@ export default function CustomerBilling() {
     } catch (e) {
       // ignore
     }
+    console.log('CustomerBilling: opening saved invoice for edit:', { invoice, editable });
     setEditingInvoice(editable as any);
     // Open the same modern print dialog for editing
   setSelectedContractsForInv(Array.isArray(invoice.contract_numbers) ? invoice.contract_numbers.map(String) : (invoice.contract_numbers ? String(invoice.contract_numbers).split(',').map(s=>s.trim()) : (invoice.contract_number ? [String(invoice.contract_number)] : [])));
