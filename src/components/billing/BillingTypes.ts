@@ -7,6 +7,7 @@ export interface ContractRow {
   customer_category?: string;
   billboards_data?: any;
   billboards_count?: number;
+  'Total Rent'?: number;
   customer_id?: string;
 }
 
@@ -53,4 +54,38 @@ export interface InvoiceItem {
   quantity: number;
   unitPrice: number;
   total: number;
+}
+
+export interface PaymentRow {
+  id: string;
+  created_at: string;
+  customer_id: string;
+  customer_name: string;
+  contract_number: number | null;
+  amount: number;
+  method: string | null;
+  reference: string | null;
+  notes: string | null;
+  paid_at: string;
+  entry_type: 'receipt' | 'invoice' | 'debt' | 'account_payment';
+}
+
+export interface PrintedInvoiceRow {
+  id: string; // uuid
+  created_at: string;
+  updated_at?: string;
+  invoice_number: string;
+  invoice_date: string;
+  customer_id?: string | null;
+  customer_name?: string | null;
+  contract_number: number; // primary related contract (not nullable in DB)
+  contract_numbers?: number[] | null; // optional array when UI groups multiple contracts
+  printer_name: string;
+  total_amount?: number | null;
+  invoice_type?: string | null;
+  currency_symbol?: string | null;
+  notes?: string | null;
+  design_face_a_path?: string | null;
+  design_face_b_path?: string | null;
+  account_payments_deducted?: string | null;
 }

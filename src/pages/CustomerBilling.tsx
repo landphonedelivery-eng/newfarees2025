@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,7 @@ import { toast } from '@/components/ui/sonner';
 import { Printer, Calculator, Receipt, Info, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAllBillboards } from '@/services/supabaseService';
+import { generateModernInvoiceHTML, numberToArabicWords, generateModernPrintInvoiceHTML } from '@/components/billing/InvoiceTemplates';
 import { getContractWithBillboards } from '@/services/contractService';
 import ContractPDFDialog from './ContractPDFDialog';
 
@@ -27,6 +29,7 @@ import AccountStatementDialog from '@/components/billing/AccountStatementDialog'
 import {
   PaymentRow,
   ContractRow,
+  PrintedInvoiceRow,
 } from '@/components/billing/BillingTypes';
 
 import {
@@ -58,6 +61,7 @@ export default function CustomerBilling() {
   const [customerName, setCustomerName] = useState<string>(paramName);
   const [contracts, setContracts] = useState<ContractRow[]>([]);
   const [payments, setPayments] = useState<PaymentRow[]>([]);
+  const [printedInvoices, setPrintedInvoices] = useState<PrintedInvoiceRow[]>([]);
   const [allBillboards, setAllBillboards] = useState<any[]>([]);
 
   // Dialog states
@@ -77,6 +81,10 @@ export default function CustomerBilling() {
   // Enhanced print invoice states
   const [printContractInvoiceOpen, setPrintContractInvoiceOpen] = useState(false);
   const [selectedContractsForInv, setSelectedContractsForInv] = useState<string[]>([]);
+  const [editingInvoice, setEditingInvoice] = useState<any | null>(null);
+  const [printOpenToPreview, setPrintOpenToPreview] = useState(false);
+  const [printAuto, setPrintAuto] = useState(false);
+  const [printForPrinter, setPrintForPrinter] = useState(false);
   const [sizeCounts, setSizeCounts] = useState<Record<string, number>>({});
   const [printPrices, setPrintPrices] = useState<Record<string, number>>({});
   const [sizeAreas, setSizeAreas] = useState<Record<string, number>>({});
@@ -134,25 +142,49 @@ export default function CustomerBilling() {
     try {
       let paymentsData: PaymentRow[] = [];
       if (customerId) {
-        const p = await supabase.from('customer_payments').select('*').eq('customer_id', customerId).order('created_at', { ascending: true });
-        if (!p.error) paymentsData = p.data || [];
+        const p = await (supabase as any).from('customer_payments').select('*').eq('customer_id', customerId).order('created_at', { ascending: true });
+        if (!p.error) paymentsData = (p.data || []) as PaymentRow[];
       }
       if ((!paymentsData || paymentsData.length === 0) && customerName) {
-        const p = await supabase.from('customer_payments').select('*').ilike('customer_name', `%${customerName}%`).order('created_at', { ascending: true });
-        if (!p.error) paymentsData = p.data || [];
+        const p = await (supabase as any).from('customer_payments').select('*').ilike('customer_name', `%${customerName}%`).order('created_at', { ascending: true });
+        if (!p.error) paymentsData = (p.data || []) as PaymentRow[];
       }
       setPayments(paymentsData);
 
       let contractsData: ContractRow[] = [];
       if (customerId) {
-        const c = await supabase.from('Contract').select('*').eq('customer_id', customerId);
-        if (!c.error) contractsData = c.data || [];
+        const c = await (supabase as any).from('Contract').select('*').eq('customer_id', customerId);
+        if (!c.error) contractsData = (c.data || []) as ContractRow[];
       }
       if ((!contractsData || contractsData.length === 0) && customerName) {
-        const c = await supabase.from('Contract').select('*').ilike('Customer Name', `%${customerName}%`);
-        if (!c.error) contractsData = c.data || [];
+        const c = await (supabase as any).from('Contract').select('*').ilike('Customer Name', `%${customerName}%`);
+        if (!c.error) contractsData = (c.data || []) as ContractRow[];
       }
       setContracts(contractsData);
+
+      let printedInvoicesData: PrintedInvoiceRow[] = [];
+      try {
+        if (customerId) {
+          const { data, error } = await (supabase as any)
+            .from('printed_invoices')
+            .select('*')
+            .eq('customer_id', customerId)
+            .order('created_at', { ascending: false });
+          if (!error && data) printedInvoicesData = data;
+        } else if (customerName) {
+          // Fallback: if no customerId, try to match by customer name (fuzzy)
+          const { data, error } = await (supabase as any)
+            .from('printed_invoices')
+            .select('*')
+            .ilike('customer_name', `%${customerName}%`)
+            .order('created_at', { ascending: false });
+          if (!error && data) printedInvoicesData = data;
+        }
+      } catch (e) {
+        console.warn('Error loading printed_invoices:', e);
+        printedInvoicesData = [];
+      }
+      setPrintedInvoices(printedInvoicesData || []);
 
       try {
         const billboards = await fetchAllBillboards();
@@ -458,131 +490,60 @@ export default function CustomerBilling() {
     setPrintItems(newItems);
   };
 
-  // ✅ تعديل الدالة ل��باعة فاتورة الطباعة فقط (بدون العقد)
-  const printPrintingInvoiceOnly = async () => {
-    if (selectedContractsForInv.length === 0) {
-      toast.error('يرجى اختيار عقد واحد على الأقل');
-      return;
-    }
+  // ...existing code... (printing is now handled inside ModernPrintInvoiceDialog)
 
-    if (printItems.length === 0) {
-      toast.error('لا توجد عناصر للطباعة');
-      return;
-    }
-
-    try {
-      await printPrintingInvoicePage();
-      toast.success('تم طباعة فاتورة الطباعة بنجاح');
-      setPrintContractInvoiceOpen(false);
-    } catch (error) {
-      console.error('Error printing:', error);
-      toast.error('فشل في الطباعة');
-    }
+  // Print a saved invoice object (same style as modern print)
+  const printSavedInvoice = (invoice: PrintedInvoiceRow) => {
+    // Open the ModernPrintInvoiceDialog prefilled in preview mode and auto-print (normal)
+    openEditPrintedInvoice(invoice, true, true, false);
   };
 
-  const printPrintingInvoicePage = async () => {
-    const printTotal = printItems.reduce((sum, item) => sum + item.totalPrice, 0);
-    
-    const printRows = printItems.map(item => `
-      <tr>
-        <td>${item.size}</td>
-        <td>${item.quantity}</td>
-        <td>${item.faces}</td>
-        <td>${item.totalFaces}</td>
-        <td>${item.area.toFixed(2)} م²</td>
-        <td>${item.totalArea.toFixed(2)} م²</td>
-        <td>${item.pricePerMeter.toLocaleString('ar-LY')} د.ل</td>
-        <td>${item.totalPrice.toLocaleString('ar-LY')} د.ل</td>
-      </tr>
-    `).join('');
+  // Print a saved invoice with printer-friendly layout (for internal print shop)
+  const printSavedInvoiceForPrinter = (invoice: PrintedInvoiceRow) => {
+    // Open the ModernPrintInvoiceDialog prefilled in preview mode and auto-print for printer
+    openEditPrintedInvoice(invoice, true, true, true);
+  };
 
-    const invoiceHtml = `<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8">
-      <title>فاتورة طباعة - ${customerName}</title>
-      <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
-        @font-face { font-family: 'Doran'; src: url('/Doran-Regular.otf') format('opentype'); }
-        body{font-family:'Cairo','Doran',Arial,sans-serif;padding:20px;max-width:1000px;margin:auto;background:white;color:black;min-height:100vh}
-        h1{font-size:28px;text-align:center;margin-bottom:20px;color:#1f2937;text-shadow:0 2px 4px rgba(31,41,55,0.1)}
-        .customer-info{margin-bottom:25px;background:#f9fafb;padding:20px;border-radius:10px;box-shadow:0 4px 6px rgba(0,0,0,0.1);border:1px solid #e5e7eb}
-        .info-row{display:flex;justify-content:space-between;margin-bottom:8px;padding:5px 0;border-bottom:1px solid #e5e7eb}
-        .info-label{font-weight:bold;color:#374151}
-        .info-value{color:#1f2937}
-        table{width:100%;border-collapse:collapse;margin:20px 0;background:white;box-shadow:0 4px 6px rgba(0,0,0,0.1);border-radius:10px;overflow:hidden}
-        th,td{border:1px solid #d1d5db;padding:8px 6px;text-align:center;color:#1f2937;font-size:12px}
-        th{background:#f3f4f6;font-weight:bold;color:#1f2937}
-        .total-row{background:#fef3c7;font-weight:bold;color:#92400e;font-size:14px}
-        .section-title{font-size:20px;font-weight:bold;margin:25px 0 15px 0;color:#1f2937;text-align:center}
-        .signature{margin-top:30px;display:flex;justify-content:space-between}
-        .signature div{text-align:center;width:200px}
-        .signature-line{border-top:2px solid #374151;margin-top:40px;padding-top:10px}
-        @media print{body{background:white!important;color:black!important;padding:10px} .customer-info,table{background:white!important} th{background:#f5f5f5!important;color:black!important} .total-row{background:#fff7ed!important;color:#92400e!important} @page{size:A4;margin:10mm}}
-      </style></head><body>
-      
-      <h1>فاتورة طباعة</h1>
-      
-      <div class="customer-info">
-        <div class="info-row">
-          <span class="info-label">العميل:</span>
-          <span class="info-value">${customerName}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">التاريخ:</span>
-          <span class="info-value">${new Date().toLocaleDateString('ar-LY')}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">العقود المرتبطة:</span>
-          <span class="info-value">${selectedContractsForInv.join(', ')}</span>
-        </div>
-      </div>
-      
-      <div class="section-title">تفاصيل الطباعة:</div>
-      <table>
-        <thead>
-          <tr>
-            <th>المقاس</th>
-            <th>عدد اللوحات</th>
-            <th>أوجه/لوحة</th>
-            <th>إجمالي الأوجه</th>
-            <th>المساحة/الوحدة</th>
-            <th>إجمالي المساحة</th>
-            <th>سعر المتر</th>
-            <th>إجمالي السعر</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${printRows}
-          <tr class="total-row">
-            <td colspan="7">الإجمالي النهائي</td>
-            <td>${printTotal.toLocaleString('ar-LY')} د.ل</td>
-          </tr>
-        </tbody>
-      </table>
-      
-      <div class="signature">
-        <div>
-          <div class="signature-line">توقيع العميل</div>
-        </div>
-        <div>
-          <div class="signature-line">توقيع الشركة</div>
-        </div>
-      </div>
-      
-      <script>window.onload=function(){window.print();}</script>
-      </body></html>`;
+  // Edit a saved printed invoice
+  const openEditPrintedInvoice = (invoice: PrintedInvoiceRow, preview: boolean = false, auto: boolean = false, forPrinter: boolean = false) => {
+    // Ensure print_items is parsed (it might be stored as a JSON string)
+    let editable = invoice as any;
+    try {
+      const raw = (invoice as any).print_items ?? (invoice as any).print_items_json ?? null;
+      if (raw && typeof raw === 'string') {
+        try { editable = { ...editable, print_items: JSON.parse(raw) }; } catch (e) { /* ignore parse error */ }
+      } else if (raw && Array.isArray(raw)) {
+        editable = { ...editable, print_items: raw };
+      }
+    } catch (e) {
+      // ignore
+    }
+    setEditingInvoice(editable as any);
+    // Open the same modern print dialog for editing
+  setSelectedContractsForInv(Array.isArray(invoice.contract_numbers) ? invoice.contract_numbers.map(String) : (invoice.contract_numbers ? String(invoice.contract_numbers).split(',').map(s=>s.trim()) : (invoice.contract_number ? [String(invoice.contract_number)] : [])));
+    setPrintOpenToPreview(preview);
+    setPrintAuto(auto);
+    setPrintForPrinter(forPrinter);
+    setPrintContractInvoiceOpen(true);
+  };
 
-    const w = window.open('', '_blank');
-    if (w) {
-      w.document.open();
-      w.document.write(invoiceHtml);
-      w.document.close();
-      w.focus();
-      setTimeout(() => w.print(), 1000);
+  const deletePrintedInvoice = async (invoice: PrintedInvoiceRow) => {
+    if (!invoice || !invoice.id) return;
+    if (!window.confirm('تأكيد حذف الفاتورة؟')) return;
+    try {
+      const { error } = await (supabase as any).from('printed_invoices').delete().eq('id', invoice.id);
+      if (error) { console.error('delete error', error); toast.error('فشل حذف الفاتورة'); return; }
+      toast.success('تم حذف الفاتورة');
+      await loadData();
+    } catch (e) {
+      console.error('Failed to delete printed invoice', e);
+      toast.error('فشل حذف الفاتورة');
     }
   };
 
   const saveContractInvoiceToAccount = async () => {
     if (selectedContractsForInv.length === 0) {
-      toast.error('يرجى اختيار عقد واحد على الأقل');
+      toast.error('يرجى اختيار عقد واحد على الأقل لحفظ الفاتورة');
       return;
     }
 
@@ -590,45 +551,40 @@ export default function CustomerBilling() {
       const printTotal = printItems.reduce((sum, item) => sum + item.totalPrice, 0);
       
       if (printTotal <= 0) {
-        toast.error('يجب أن يكون إجمالي الفاتورة أكبر من صفر');
+        toast.error('لا يمكن حفظ فاتورة بقيمة صفر أو أقل');
         return;
       }
 
-      const selectedContractNumbers = selectedContractsForInv.join(', ');
-      const itemsDescription = printItems.map(item => 
-        `${item.size}: ${item.quantity} لوحة × ${item.totalFaces} وجه (${item.totalArea.toFixed(2)} م²)`
-      ).join(' | ');
+      // Generate a unique invoice number
+      const invoice_number = `PRINT-${new Date().getTime()}`;
 
-      const payload = {
-        customer_id: customerId || null,
-        customer_name: customerName,
-        contract_number: selectedContractsForInv.length === 1 ? Number(selectedContractsForInv[0]) : null,
-        amount: printTotal,
-        method: 'فاتورة طباعة',
-        reference: `عقود: ${selectedContractNumbers}`,
-        notes: `فاتورة طباعة - ${itemsDescription}`,
-        paid_at: new Date().toISOString(),
-        entry_type: 'invoice',
-      };
+      // Prepare notes from print items
+      const notes = printItems.map(item => 
+        `${item.size}: ${item.quantity} لوحة, ${item.totalFaces} وجه, ${item.totalArea.toFixed(2)}م²`
+      ).join('; ');
 
-      const { error } = await supabase.from('customer_payments').insert(payload).select();
-      if (error) { 
-        console.error('Invoice insert error:', error); 
-        toast.error('فشل في حفظ الفاتورة: ' + error.message); 
-        return; 
+      // The user schema indicates contract_number is not nullable.
+      // We will use the first selected contract number. If multiple are selected, we can consider how to handle it.
+      // For now, we'll enforce selecting only one contract to save, or just use the first.
+      // Let's use the first one for now.
+      const contract_number = Number(selectedContractsForInv[0]);
+      if (isNaN(contract_number)) {
+        toast.error('رقم العقد المختار غير صالح.');
+        return;
       }
 
-      toast.success('تم حفظ فاتورة الطباعة في حساب العميل');
+      // The actual insert is handled by ModernPrintInvoiceDialog (it inserts with the selected invoice_type).
+      // Here we just refresh the data and close the dialog (this function is passed as onSaveInvoice).
+      toast.success('تم حفظ فاتورة الطباعة بنجاح. جارٍ تحديث السجل...');
       setPrintContractInvoiceOpen(false);
-      
+      // Clear state after saving
       setSelectedContractsForInv([]);
       setSizeCounts({});
       setPrintItems([]);
-      
       await loadData();
     } catch (e) { 
       console.error('Invoice save error:', e); 
-      toast.error('خطأ غير متوقع: ' + (e as Error).message); 
+      toast.error(`خطأ غير متوقع: ${(e as Error).message}`); 
     }
   };
 
@@ -665,6 +621,7 @@ export default function CustomerBilling() {
               </Button>
               <Button 
                 onClick={() => {
+                  setEditingInvoice(null);
                   setSelectedContractsForInv(contracts[0]?.Contract_Number ? [String(contracts[0]?.Contract_Number)] : []);
                   setPrintContractInvoiceOpen(true);
                 }} 
@@ -702,12 +659,73 @@ export default function CustomerBilling() {
         onAddAccountPayment={() => { setAccountPaymentOpen(true); setAccountPaymentAmount(''); setAccountPaymentMethod(''); setAccountPaymentReference(''); setAccountPaymentNotes(''); setAccountPaymentDate(new Date().toISOString().slice(0,10)); setAccountPaymentContract(''); setAccountPaymentToGeneral(true); }}
       />
 
+      {/* Printed Invoices Section */}
+      <Card className="expenses-preview-card mt-6">
+        <CardHeader>
+          <CardTitle className="expenses-preview-title">فواتير الطباعة والتركيب المحفوظة</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="expenses-table-container">
+            <table className="w-full">
+              <thead>
+                <tr className="expenses-table-header">
+                  <th>رقم الفاتورة</th>
+                  <th>التاريخ</th>
+                  <th>النوع</th>
+                  <th>أرقام العقود</th>
+                  <th>الإجمالي</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {printedInvoices.length > 0 ? (
+                  printedInvoices.map((invoice) => (
+                    <tr key={invoice.id} className="expenses-table-row">
+                      <td className="num">{invoice.invoice_number}</td>
+                      <td>{invoice.invoice_date ? new Date(invoice.invoice_date).toLocaleDateString('ar-LY') : ''}</td>
+                      <td><Badge variant="outline">{invoice.invoice_type}</Badge></td>
+                      <td className="num">{Array.isArray(invoice.contract_numbers) ? invoice.contract_numbers.join(', ') : (invoice.contract_numbers ?? invoice.contract_number ?? '')}</td>
+                      <td className="expenses-amount-calculated num">
+                        {((invoice.total_amount ?? 0) as number).toLocaleString('ar-LY')} د.ل
+                      </td>
+                      <td className="flex items-center justify-center gap-2 py-2">
+                        <Button variant="outline" size="sm" onClick={() => printSavedInvoice(invoice)}>
+                          <Printer className="h-4 w-4 ml-1" />
+                          طباعة
+                        </Button>
+                        <Button variant="secondary" size="sm" onClick={() => printSavedInvoiceForPrinter(invoice)}>
+                          <FileText className="h-4 w-4 ml-1" />
+                          للمطبعة
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => openEditPrintedInvoice(invoice)}>
+                          تعديل
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => deletePrintedInvoice(invoice)}>
+                          حذف
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr className="expenses-table-row">
+                    <td colSpan={6} className="text-center text-muted-foreground py-6">
+                      لا توجد فواتير طباعة محفوظة لهذا العميل.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Modern Print Invoice Dialog */}
       <ModernPrintInvoiceDialog
         open={printContractInvoiceOpen}
-        onClose={() => setPrintContractInvoiceOpen(false)}
+        onClose={() => { setPrintContractInvoiceOpen(false); setPrintOpenToPreview(false); setEditingInvoice(null); setPrintAuto(false); setPrintForPrinter(false); }}
+        customerId={customerId}
         customerName={customerName}
-        contracts={contracts}
+        contracts={contracts as any}
         selectedContracts={selectedContractsForInv}
         onSelectContracts={setSelectedContractsForInv}
         printItems={printItems}
@@ -716,8 +734,11 @@ export default function CustomerBilling() {
         includeAccountBalance={includeAccountBalance}
         onIncludeAccountBalance={setIncludeAccountBalance}
         accountPayments={accountPayments}
-        onPrintInvoice={printPrintingInvoiceOnly}
-        onSaveInvoice={saveContractInvoiceToAccount}
+        onSaveInvoice={async () => { setEditingInvoice(null); setPrintOpenToPreview(false); setPrintAuto(false); setPrintForPrinter(false); await saveContractInvoiceToAccount(); }}
+        initialInvoice={editingInvoice}
+        openToPreview={printOpenToPreview}
+    autoPrint={printAuto}
+    autoPrintForPrinter={printForPrinter}
       />
 
       {/* ✅ NEW: Receipt Print Dialog */}

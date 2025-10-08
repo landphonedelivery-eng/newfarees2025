@@ -316,37 +316,22 @@ export default function InstallationPDFDialog({ open, onOpenChange, contract }: 
       };
 
       let billboardsToShow = await getBillboardsData();
-      console.log('📦 All billboards before filter:', billboardsToShow.length, billboardsToShow);
 
       if (selectedTeamId) {
         const selectedTeam = installationTeams.find(t => t.id === selectedTeamId);
-        console.log('👥 Selected team:', selectedTeam);
         if (selectedTeam) {
           if (selectedTeam.sizes_ids && selectedTeam.sizes_ids.length > 0) {
-            console.log('🔍 Filtering by sizes_ids:', selectedTeam.sizes_ids);
             billboardsToShow = billboardsToShow.filter((billboard: any) => {
               const sid = String(billboard.size_id ?? '');
-              const match = sid && selectedTeam.sizes_ids!.includes(sid);
-              console.log(`  Billboard ${billboard.ID}: size_id=${sid}, match=${match}`);
-              return match;
+              return sid && selectedTeam.sizes_ids!.includes(sid);
             });
           } else if (selectedTeam.sizes && selectedTeam.sizes.length > 0) {
-            console.log('🔍 Filtering by sizes (text):', selectedTeam.sizes);
             billboardsToShow = billboardsToShow.filter((billboard: any) => {
               const size = String(billboard.Size ?? billboard.size ?? '');
-              const match = selectedTeam.sizes!.includes(size);
-              console.log(`  Billboard ${billboard.ID}: size=${size}, match=${match}`);
-              return match;
+              return selectedTeam.sizes!.includes(size);
             });
           }
         }
-      }
-
-      console.log('✅ Billboards after filter:', billboardsToShow.length, billboardsToShow);
-
-      if (billboardsToShow.length === 0) {
-        console.warn('⚠️ No billboards to print!');
-        toast.warning('لا توجد لوحات تطابق الفرقة المختارة. سيتم طباعة صفحة فارغة.');
       }
 
       const norm = (b: any) => {
@@ -395,7 +380,6 @@ export default function InstallationPDFDialog({ open, onOpenChange, contract }: 
       };
 
       const normalized = billboardsToShow.map(norm);
-      console.log('🎯 Normalized billboards for print:', normalized.length, normalized);
       const ROWS_PER_PAGE = 12;
 
       const tablePagesHtml = normalized.length
@@ -446,16 +430,7 @@ export default function InstallationPDFDialog({ open, onOpenChange, contract }: 
               </div>
             `)
             .join('')
-        : `
-              <div class="template-container page">
-                <img src="/bgc2.svg" alt="خلفية جدول اللوحات" class="template-image" onerror="console.warn('Failed to load bgc2.svg')" />
-                <div class="table-area">
-                  <div style="text-align: center; padding: 50px; font-size: 18px; color: #666; font-family: 'Noto Sans Arabic', Arial, sans-serif;">
-                    ⚠️ لا توجد لوحات تطابق مقاسات الفرقة المختارة
-                  </div>
-                </div>
-              </div>
-            `;
+        : '';
 
       const pdfTitle = `تركيب عقد ${contractData.contractNumber} - ${contractData.customerName}`;
       const selectedTeamName = selectedTeamId ? installationTeams.find(t => t.id === selectedTeamId)?.team_name || 'الكل' : 'الكل';

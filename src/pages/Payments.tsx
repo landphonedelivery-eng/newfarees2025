@@ -621,7 +621,7 @@ export default function Customers() {
 
   const printMultiContractInvoice = () => {
     if (selectedContractsForInv.length === 0) {
-      toast.error('يرجى اختيار عقد و��حد على الأقل');
+      toast.error('يرجى اختيار عقد واحد على الأقل');
       return;
     }
 
@@ -988,7 +988,7 @@ export default function Customers() {
                             <TableHead>تاريخ البداية</TableHead>
                             <TableHead>تاريخ النهاية</TableHead>
                             <TableHead>القيمة الإجمالية</TableHead>
-                            <TableHead>��لمدفوع</TableHead>
+                            <TableHead>المدفوع</TableHead>
                             <TableHead>المتبقي</TableHead>
                             <TableHead>الحالة</TableHead>
                           </TableRow>
@@ -1149,12 +1149,12 @@ export default function Customers() {
             {addType !== 'account_payment' && (
               <div>
                 <label className="text-sm font-medium">العقد</label>
-                <Select value={addContract} onValueChange={(v) => setAddContract(v === '__account__' ? '' : v)}>
+                <Select value={addContract} onValueChange={setAddContract}>
                   <SelectTrigger>
                     <SelectValue placeholder="اختر عقدًا أو اتركه فارغاً للحساب العام" />
                   </SelectTrigger>
                   <SelectContent className="max-h-60">
-                    <SelectItem value="__account__">حساب عام (بدون عقد محدد)</SelectItem>
+                    <SelectItem value="">حساب عام (بدون عقد محدد)</SelectItem>
                     {customerContracts.map((ct)=> (
                       <SelectItem key={String(ct.Contract_Number)} value={String(ct.Contract_Number)}>{String(ct.Contract_Number)}</SelectItem>
                     ))}
