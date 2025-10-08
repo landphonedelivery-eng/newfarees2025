@@ -6,7 +6,7 @@ import { loadBillboards } from '@/services/billboardService';
 import { addBillboardsToContract, getContractWithBillboards, removeBillboardFromContract, updateContract } from '@/services/contractService';
 import { calculateInstallationCostFromIds } from '@/services/installationService';
 import { getPriceFor, getDailyPriceFor, CustomerType } from '@/data/pricing';
-import { ContractPDFDialog } from '@/components/contract';
+import { ContractPDFDialog } from '@/components/Contract';
 import type { Billboard } from '@/types';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, DollarSign, Settings, Wrench } from 'lucide-react';
