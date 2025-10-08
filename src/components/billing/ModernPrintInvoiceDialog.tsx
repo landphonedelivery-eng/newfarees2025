@@ -472,7 +472,7 @@ export default function ModernPrintInvoiceDialog({
         const currentDate = new Date(invoiceDate);
         const formattedDate = currentDate.toLocaleDateString('ar-LY');
         
-        // ✅ إنشاء اسم الملف مع معلومات العميل والعقود والتاريخ
+        // ✅ إنشاء اسم الملف مع معلومات العميل و��لعقود والتاريخ
         const contractsList = selectedContracts.join('-');
         const dateFormatted = currentDate.toISOString().slice(0, 10).replace(/-/g, '_');
         const customerNameForFile = customerName.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '_');
@@ -764,20 +764,18 @@ export default function ModernPrintInvoiceDialog({
                 <thead>
                   <tr>
                     <th style="width: 6%">#</th>
-                    <th style="width: 24%">المقاس</th>
-                    <th style="width: 8%">عدد اللوحات</th>
-                    <th style="width: 8%">أوجه/لوحة</th>
-                    <th style="width: 8%">إجمالي الأوجه</th>
-                    <th style="width: 10%">الأبعاد (م)</th>
+                    <th style="width: 30%">المقاس</th>
+                    <th style="width: 12%">عدد اللوحات</th>
+                    <th style="width: 12%">أوجه/لوحة</th>
+                    <th style="width: 12%">إجمالي الأوجه</th>
+                    <th style="width: 18%">الأبعاد (م)</th>
                     <th style="width: 10%">مساحة الأوجه (م²)</th>
-                    <th style="width: 10%">سعر المتر</th>
-                    <th style="width: 16%">إجمالي السعر</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${displayItems.map((item, index) => {
                     const isEmpty = !item.size;
-                    
+
                     return `
                       <tr class="${isEmpty ? 'empty-row' : ''}">
                         <td>${isEmpty ? '' : index + 1}</td>
@@ -789,40 +787,27 @@ export default function ModernPrintInvoiceDialog({
                         <td>${isEmpty ? '' : (typeof item.totalFaces === 'number' ? formatArabicNumber(item.totalFaces) : item.totalFaces)}</td>
                         <td>${isEmpty ? '' : (typeof item.width === 'number' && typeof item.height === 'number' ? `${item.width} × ${item.height}` : '')}</td>
                         <td>${isEmpty ? '' : (typeof item.area === 'number' && typeof item.totalFaces === 'number' ? `${(item.area * item.totalFaces).toFixed(2)} م²` : item.area)}</td>
-                        <td>${isEmpty ? '' : (typeof item.pricePerMeter === 'number' ? `${formatArabicNumber(item.pricePerMeter)} ${currency.symbol}` : item.pricePerMeter)}</td>
-                        <td>${isEmpty ? '' : (typeof item.totalPrice === 'number' ? `${formatArabicNumber(item.totalPrice)} ${currency.symbol}` : item.totalPrice)}</td>
                       </tr>
                     `;
                   }).join('')}
                 </tbody>
               </table>
-              
+
               <div class="total-section">
                 ${discount > 0 ? `
                   <div class="total-row subtotal">
-                    <span>المجموع الفرعي:</span>
-                    <span>${formatArabicNumber(subtotal)} ${currency.symbol}</span>
+                    <span>إجمالي الأوجه:</span>
+                    <span>${formatArabicNumber(subtotal)} وحدة</span>
                   </div>
                   <div class="total-row discount">
-                    <span>خصم (${discountType === 'percentage' ? `${discount}%` : `${formatArabicNumber(discount)} ${currency.symbol}`}):</span>
-                    <span>- ${formatArabicNumber(discountAmount)} ${currency.symbol}</span>
+                    <span>خصم (${discountType === 'percentage' ? `${discount}%` : `${formatArabicNumber(discount)} وحدة`}):</span>
+                    <span>- ${formatArabicNumber(discountAmount)} وحدة</span>
                   </div>
                 ` : ''}
-                
-                ${includeAccountBalance && accountPayments > 0 ? `
-                  <div class="total-row discount">
-                    <span>رصيد الحساب:</span>
-                    <span>- ${formatArabicNumber(accountPayments)} ${currency.symbol}</span>
-                  </div>
-                ` : ''}
-                
+
                 <div class="total-row grand-total">
-                  <span>المجموع الإجمالي:</span>
-                  <span class="currency">${formatArabicNumber(total)} ${currency.symbol}</span>
-                </div>
-                
-                <div style="margin-top: 15px; font-size: 13px; color: #666; text-align: center;">
-                  المبلغ بالكلمات: ${formatArabicNumber(total)} ${currency.writtenName}
+                  <span>العدد النهائي للأوجه:</span>
+                  <span class="currency">${formatArabicNumber(total)} وحدة</span>
                 </div>
               </div>
               
@@ -969,7 +954,7 @@ export default function ModernPrintInvoiceDialog({
         <h3 className="expenses-preview-label mb-3 text-lg">بيانات العميل</h3>
         <div className="text-sm space-y-1">
           <div><strong>الاسم:</strong> {customerName}</div>
-          <div><strong>العقود المرتبطة:</strong> {selectedContracts.join(', ')}</div>
+          <div><strong>العقود المرتبط��:</strong> {selectedContracts.join(', ')}</div>
           <div><strong>تاريخ الفاتورة:</strong> {new Date(invoiceDate).toLocaleDateString('ar-LY')}</div>
         </div>
       </div>
