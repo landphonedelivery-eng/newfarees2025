@@ -49,6 +49,7 @@ interface ContractRow {
 interface ModernPrintInvoiceDialogProps {
   open: boolean;
   onClose: () => void;
+  customerId?: string | null;
   customerName: string;
   contracts: ContractRow[];
   selectedContracts: string[];
@@ -61,6 +62,11 @@ interface ModernPrintInvoiceDialogProps {
   accountPayments: number;
   onPrintInvoice: () => void;
   onSaveInvoice: () => void;
+  // New props for loading/saving existing invoices and auto-printing
+  initialInvoice?: any | null;
+  openToPreview?: boolean;
+  autoPrint?: boolean;
+  autoPrintForPrinter?: boolean;
 }
 
 const CURRENCIES = [
@@ -275,7 +281,7 @@ export default function ModernPrintInvoiceDialog({
       const size = String(billboard.Size ?? billboard.size ?? 'غير محدد');
       const faces = Number(billboard.Faces ?? billboard.faces ?? billboard.Number_of_Faces ?? billboard.Faces_Count ?? billboard.faces_count ?? 1);
       
-      // ✅ جلب الأبعاد من قاعدة البيانات
+      // ✅ جلب الأبعاد م�� قاعدة البيانات
       const dimensions = sizeDimensionsMap[size];
       const width = dimensions?.width || 0;
       const height = dimensions?.height || 0;
@@ -675,7 +681,7 @@ export default function ModernPrintInvoiceDialog({
                 <div class="invoice-info">
                   <div class="invoice-title">INVOICE</div>
                   <div class="invoice-details">
-                    رقم الفاتورة: ${invoiceNumber}<br>
+                    رقم ال��اتورة: ${invoiceNumber}<br>
                     التاريخ: ${formattedDate}<br>
                     العملة: ${currency.name}
                   </div>
@@ -1185,7 +1191,7 @@ export default function ModernPrintInvoiceDialog({
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs text-muted-foreground mb-2">سعر المتر</label>
+                                <label className="block text-xs text-muted-foreground mb-2">سعر ا��متر</label>
                                 <Input
                                   type="number"
                                   value={item.pricePerMeter}
