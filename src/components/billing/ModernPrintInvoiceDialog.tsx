@@ -162,7 +162,7 @@ export default function ModernPrintInvoiceDialog({
     let calculatedTotal = 0;
     
     localPrintItems.forEach((item, index) => {
-      // ✅ الحساب الصحيح: العرض × الارتفاع × عدد الأوجه × سعر المتر
+      // ✅ الحساب الصحيح: العرض × الارتفاع × عدد الأوجه × سعر ا��متر
       const width = Number(item.width) || 0;
       const height = Number(item.height) || 0;
       const totalFaces = Number(item.totalFaces) || 0;
@@ -227,10 +227,10 @@ export default function ModernPrintInvoiceDialog({
             quantity: Number(it.quantity ?? it.qty ?? 0) || 0,
             faces: Number(it.faces ?? it.face_count ?? it.Number_of_Faces ?? 0) || 0,
             totalFaces: Number(it.totalFaces ?? it.total_faces ?? 0) || 0,
-            area: Number(it.area ?? it.area_m2 ?? (Number(it.width || 0) * Number(it.height || 0)) || 0) || 0,
-            pricePerMeter: Number(it.pricePerMeter ?? it.print_price ?? it.price || 0) || 0,
-            totalArea: Number(it.totalArea ?? it.total_area ?? 0) || 0,
-            totalPrice: Number(it.totalPrice ?? it.total_price ?? it.price_total ?? 0) || 0,
+            area: Number((it.area ?? it.area_m2 ?? (Number(it.width || 0) * Number(it.height || 0))) || 0) || 0,
+            pricePerMeter: Number((it.pricePerMeter ?? it.print_price ?? it.price) || 0) || 0,
+            totalArea: Number((it.totalArea ?? it.total_area ?? 0) || 0) || 0,
+            totalPrice: Number((it.totalPrice ?? it.total_price ?? it.price_total) || 0) || 0,
             sortOrder: Number(it.sortOrder ?? it.sort_order ?? 0) || 0,
             width: Number(it.width || it.w || 0) || 0,
             height: Number(it.height || it.h || 0) || 0,
@@ -433,7 +433,7 @@ export default function ModernPrintInvoiceDialog({
       item.totalArea = item.area * item.totalFaces;
     }
     
-    // ✅ الحساب الصحيح: العرض × الارتفاع × عدد الأوجه × سعر المتر
+    // ✅ الحساب الصحيح: العرض × الارتفاع × عدد الأوج�� × سعر المتر
     item.totalPrice = item.width * item.height * item.totalFaces * item.pricePerMeter;
     
     updatedItems[index] = item;
@@ -854,7 +854,7 @@ export default function ModernPrintInvoiceDialog({
           throw new Error('فشل في فتح نافذة الطباعة. يرجى التحقق من إعدادات المتصفح والسماح بالنوافذ المنبثقة.');
         }
 
-        // ✅ تعيين عنوان النافذة مع معلومات العميل والعقود والتاريخ
+        // ✅ تعي��ن عنوان النافذة مع معلومات العميل والعقود والتاريخ
         printWindow.document.title = fileName;
 
         printWindow.document.open();
@@ -1044,7 +1044,7 @@ export default function ModernPrintInvoiceDialog({
               </div>
 
               <div className="text-center mt-4 text-sm text-muted-foreground">
-                المبلغ ب��لكلمات: {formatArabicNumber(total)} {currency.writtenName}
+                المبلغ بالكلمات: {formatArabicNumber(total)} {currency.writtenName}
               </div>
             </div>
           </div>
@@ -1208,7 +1208,7 @@ export default function ModernPrintInvoiceDialog({
                     </div>
                     <div className="mt-4 p-3 bg-muted/50 rounded-lg">
                       <p className="text-xs text-muted-foreground">
-                        💡 انقر على أي صف لاختيار العقد، أو انقر على المربع للتحديد المباشر
+                        💡 انقر على أي صف لاختيار العقد، أو ان��ر على المربع للتحديد المباشر
                       </p>
                     </div>
                   </CardContent>
@@ -1411,7 +1411,7 @@ export default function ModernPrintInvoiceDialog({
               disabled={localPrintItems.length === 0}
             >
               <Printer className="h-4 w-4" />
-              طباعة الفا��ورة
+              طباعة الفاتورة
             </Button>
           </div>
         </div>
