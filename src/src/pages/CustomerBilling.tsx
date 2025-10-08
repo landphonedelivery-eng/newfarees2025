@@ -481,8 +481,8 @@ export default function CustomerBilling() {
   };
 
   const printPrintingInvoicePage = async () => {
-    const printTotal = printItems.reduce((sum, item) => sum + item.totalPrice, 0);
-    
+    const totalFaces = printItems.reduce((s, item) => s + (Number(item.totalFaces) || 0), 0);
+
     const printRows = printItems.map(item => `
       <tr>
         <td>${item.size}</td>
@@ -491,8 +491,6 @@ export default function CustomerBilling() {
         <td>${item.totalFaces}</td>
         <td>${item.area.toFixed(2)} م²</td>
         <td>${item.totalArea.toFixed(2)} م²</td>
-        <td>${item.pricePerMeter.toLocaleString('ar-LY')} د.ل</td>
-        <td>${item.totalPrice.toLocaleString('ar-LY')} د.ل</td>
       </tr>
     `).join('');
 
@@ -517,9 +515,9 @@ export default function CustomerBilling() {
         .signature-line{border-top:2px solid #374151;margin-top:40px;padding-top:10px}
         @media print{body{background:white!important;color:black!important;padding:10px} .customer-info,table{background:white!important} th{background:#f5f5f5!important;color:black!important} .total-row{background:#fff7ed!important;color:#92400e!important} @page{size:A4;margin:10mm}}
       </style></head><body>
-      
+
       <h1>فاتورة طباعة</h1>
-      
+
       <div class="customer-info">
         <div class="info-row">
           <span class="info-label">العميل:</span>
@@ -534,7 +532,7 @@ export default function CustomerBilling() {
           <span class="info-value">${selectedContractsForInv.join(', ')}</span>
         </div>
       </div>
-      
+
       <div class="section-title">تفاصيل الطباعة:</div>
       <table>
         <thead>
@@ -545,15 +543,13 @@ export default function CustomerBilling() {
             <th>إجمالي الأوجه</th>
             <th>المساحة/الوحدة</th>
             <th>إجمالي المساحة</th>
-            <th>سعر المتر</th>
-            <th>إجمالي السعر</th>
           </tr>
         </thead>
         <tbody>
           ${printRows}
           <tr class="total-row">
-            <td colspan="7">الإجمالي النهائي</td>
-            <td>${printTotal.toLocaleString('ar-LY')} د.ل</td>
+            <td colspan="5">الإجمالي النهائي (أوجه)</td>
+            <td>${totalFaces.toLocaleString('ar-LY')} وحدة</td>
           </tr>
         </tbody>
       </table>
@@ -618,7 +614,7 @@ export default function CustomerBilling() {
         return; 
       }
 
-      toast.success('تم حفظ فاتورة الطباعة في حساب العميل');
+      toast.success('تم حفظ فات��رة الطباعة في حساب العميل');
       setPrintContractInvoiceOpen(false);
       
       setSelectedContractsForInv([]);
