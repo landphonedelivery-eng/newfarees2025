@@ -513,43 +513,7 @@ export default function ModernPrintInvoiceDialog({
         const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no';
         let printWindow: Window | null = null;
 
-        if (!isPrinterCopy) {
-          const itemsForGenerator = displayItems.map(it => ({
-            size: it.size || '',
-            quantity: it.quantity || 0,
-            faces: it.faces || 0,
-            totalFaces: it.totalFaces || 0,
-            width: it.width || 0,
-            height: it.height || 0,
-            area: it.area || 0,
-            pricePerMeter: it.pricePerMeter || 0,
-            totalPrice: it.totalPrice || 0,
-          }));
-
-          const html = generateModernPrintInvoiceHTML({
-            invoiceNumber,
-            invoiceType: invoiceTypeText,
-            invoiceDate,
-            customerName,
-            items: itemsForGenerator,
-            totalAmount: moneySubtotal,
-            notes,
-            printerName: 'web',
-            hidePrices: false,
-          });
-
-          printWindow = window.open('', '_blank', windowFeatures);
-          if (!printWindow) {
-            toast.error('فشل فتح نافذة الطباعة. يرجى السماح بالنوافذ المنبثقة.');
-            return;
-          }
-
-          printWindow.document.open();
-          printWindow.document.write(html);
-          printWindow.document.close();
-          toast.success(`تم فتح الفاتورة للطباعة بنجاح بعم��ة ${currency.name}!`);
-          return;
-        }
+        const tableHeaderExtra = isPrinterCopy ? '' : `<th style="width: 12%">سعر المتر</th><th style="width: 12%">السعر الإجمالي</th>`;
 
         const htmlContent = `
           <!DOCTYPE html>
