@@ -159,7 +159,7 @@ export default function ModernPrintInvoiceDialog({
     }
   };
 
-  // ✅ المجموعات: المجموع النقدي وإجمالي الأوجه
+  // ✅ المجموعات: المجموع النقدي وإج��الي الأوجه
   const moneySubtotal = useMemo(() => {
     let sum = 0;
     localPrintItems.forEach((item, index) => {
@@ -547,7 +547,7 @@ export default function ModernPrintInvoiceDialog({
           printWindow.document.open();
           printWindow.document.write(html);
           printWindow.document.close();
-          toast.success(`تم فتح الفاتورة للطباعة بنجاح بعملة ${currency.name}!`);
+          toast.success(`تم فتح الفاتورة للطباعة بنجاح بعم��ة ${currency.name}!`);
           return;
         }
 
@@ -823,7 +823,7 @@ export default function ModernPrintInvoiceDialog({
                     <th style="width: 12%">أوجه/لوحة</th>
                     <th style="width: 12%">إجمالي الأوجه</th>
                     <th style="width: 18%">الأبعاد (م)</th>
-                    <th style="width: 10%">مساحة الأوجه (م²)</th>
+                    <th style="width: 10%">مساحة الأوجه (م��)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -850,7 +850,7 @@ export default function ModernPrintInvoiceDialog({
               <div class="total-section">
                 ${facesTotal > 0 ? `
                   <div class="total-row subtotal">
-                    <span>إجمالي الأوجه:</span>
+                    <span>��جمالي الأوجه:</span>
                     <span>${formatArabicNumber(facesTotal)} وحدة</span>
                   </div>
                 ` : ''}
@@ -910,7 +910,7 @@ export default function ModernPrintInvoiceDialog({
 
       } catch (error) {
         console.error('Error in print invoice:', error);
-        const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
+        const errorMessage = error instanceof Error ? error.message : 'خطأ غير م��روف';
         toast.error(`حدث خطأ أثناء تحضير الفاتورة للطباعة: ${errorMessage}`);
       }
     };
@@ -932,7 +932,7 @@ export default function ModernPrintInvoiceDialog({
 
     try {
       // Use computed subtotal/discount/total from component state
-      const subtotalValue = Number(subtotal) || 0;
+      const subtotalValue = Number(moneySubtotal) || 0;
       const discountAmountValue = Number(discountAmount) || 0;
       const totalValue = Number(total) || 0;
 
