@@ -75,7 +75,7 @@ const CURRENCIES = [
   { code: 'EUR', name: 'يورو', symbol: '€', writtenName: 'يورو' },
 ];
 
-// ✅ دالة تنسيق الأرقام العربية
+// ✅ دا��ة تنسيق الأرقام العربية
 const formatArabicNumber = (num: number): string => {
   if (isNaN(num) || num === null || num === undefined) return '0';
   
@@ -193,19 +193,70 @@ export default function ModernPrintInvoiceDialog({
 
   useEffect(() => {
     if (open) {
-      setActiveTab('setup');
-      const timestamp = Date.now();
-      const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-      setInvoiceNumber(`INV-${timestamp}${randomSuffix}`);
-      setInvoiceDate(new Date().toISOString().slice(0, 10));
-      setNotes('');
-      setDiscount(0);
-      setLocalPrintItems([]);
-      
-      // ✅ جلب بيانات الأحجام عند فتح النافذة
+      // If an initial invoice is provided (editing a saved invoice), populate fields from it
+      if (initialInvoice) {
+        try {
+          const inv = initialInvoice as any;
+          // parse print_items if necessary
+          let items: any[] = [];
+          if (inv.print_items && typeof inv.print_items === 'string') {
+            items = JSON.parse(inv.print_items);
+          } else if (inv.print_items && Array.isArray(inv.print_items)) {
+            items = inv.print_items;
+          } else if (inv.print_items_json && typeof inv.print_items_json === 'string') {
+            try { items = JSON.parse(inv.print_items_json); } catch (e) { items = []; }
+          }
+
+          setLocalPrintItems((items || []).map((it:any) => ({
+            size: it.size || '',
+            quantity: Number(it.quantity) || 0,
+            faces: Number(it.faces) || 0,
+            totalFaces: Number(it.totalFaces) || 0,
+            area: Number(it.area) || 0,
+            pricePerMeter: Number(it.pricePerMeter) || 0,
+            totalArea: Number(it.totalArea) || 0,
+            totalPrice: Number(it.totalPrice) || 0,
+            sortOrder: Number(it.sortOrder) || 0,
+            width: Number(it.width) || 0,
+            height: Number(it.height) || 0,
+          })));
+
+          if (inv.invoice_number) setInvoiceNumber(inv.invoice_number);
+          if (inv.invoice_date) setInvoiceDate(typeof inv.invoice_date === 'string' ? inv.invoice_date.slice(0,10) : new Date(inv.invoice_date).toISOString().slice(0,10));
+          setNotes(inv.notes || '');
+          if (inv.currency) {
+            const found = CURRENCIES.find(c => c.code === inv.currency || c.name === inv.currency);
+            if (found) setCurrency(found);
+          }
+          if (typeof inv.discount === 'number') setDiscount(inv.discount);
+          if (inv.discount_type === 'fixed' || inv.discount_type === 'percentage') setDiscountType(inv.discount_type);
+
+          // If contract_numbers provided, set selected contracts via callback
+          if (inv.contract_numbers && onSelectContracts) {
+            if (Array.isArray(inv.contract_numbers)) onSelectContracts(inv.contract_numbers.map(String));
+            else if (typeof inv.contract_numbers === 'string') onSelectContracts(inv.contract_numbers.split(',').map((s:string)=>s.trim()));
+          }
+
+          // open preview tab if requested
+          if (openToPreview) setActiveTab('preview');
+        } catch (e) {
+          console.warn('Failed to parse initial invoice', e);
+        }
+      } else {
+        setActiveTab('setup');
+        const timestamp = Date.now();
+        const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        setInvoiceNumber(`INV-${timestamp}${randomSuffix}`);
+        setInvoiceDate(new Date().toISOString().slice(0, 10));
+        setNotes('');
+        setDiscount(0);
+        setLocalPrintItems([]);
+      }
+
+      // Always fetch size data (dimensions)
       fetchSizeData();
     }
-  }, [open]);
+  }, [open, initialInvoice]);
 
   const getBillboardsFromContracts = async (contractNumbers: string[]) => {
     if (contractNumbers.length === 0) {
@@ -281,7 +332,7 @@ export default function ModernPrintInvoiceDialog({
       const size = String(billboard.Size ?? billboard.size ?? 'غير محدد');
       const faces = Number(billboard.Faces ?? billboard.faces ?? billboard.Number_of_Faces ?? billboard.Faces_Count ?? billboard.faces_count ?? 1);
       
-      // ✅ جلب الأبعاد م�� قاعدة البيانات
+      // ✅ جلب الأبعاد من قاعدة البيانات
       const dimensions = sizeDimensionsMap[size];
       const width = dimensions?.width || 0;
       const height = dimensions?.height || 0;
@@ -681,7 +732,7 @@ export default function ModernPrintInvoiceDialog({
                 <div class="invoice-info">
                   <div class="invoice-title">INVOICE</div>
                   <div class="invoice-details">
-                    رقم ال��اتورة: ${invoiceNumber}<br>
+                    رقم الفاتورة: ${invoiceNumber}<br>
                     التاريخ: ${formattedDate}<br>
                     العملة: ${currency.name}
                   </div>
@@ -1191,7 +1242,7 @@ export default function ModernPrintInvoiceDialog({
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs text-muted-foreground mb-2">سعر ا��متر</label>
+                                <label className="block text-xs text-muted-foreground mb-2">سعر المتر</label>
                                 <Input
                                   type="number"
                                   value={item.pricePerMeter}
