@@ -451,7 +451,7 @@ export default function ModernPrintInvoiceDialog({
       return;
     }
 
-    // ✅ استخدام نفس تصميم الفاتورة من الكود المرجعي
+    // ✅ استخدام نف�� تصميم الفاتورة من الكود المرجعي
     const printInvoice = async () => {
       try {
         const testWindow = window.open('', '_blank', 'width=1,height=1');
@@ -869,33 +869,58 @@ export default function ModernPrintInvoiceDialog({
       return;
     }
 
-    try {
-      const totalAmount = localPrintItems.reduce((s, it) => s + (Number(it.totalPrice) || 0), 0);
+    // contract_number is required by DB
+    if (!selectedContracts || selectedContracts.length === 0) {
+      toast.error('يرجى اختيار عقد واحد على الأقل لحفظ الفاتورة');
+      return;
+    }
 
-      // Ensure contract_number (singular) provided if DB requires it
-      const firstContractNumber = selectedContracts && selectedContracts.length > 0 ? Number(selectedContracts[0]) : null;
+    try {
+      // Use computed subtotal/discount/total from component state
+      const subtotalValue = Number(subtotal) || 0;
+      const discountAmountValue = Number(discountAmount) || 0;
+      const totalValue = Number(total) || 0;
+
+      const firstContractNumber = Number(selectedContracts[0]);
+      if (isNaN(firstContractNumber)) {
+        toast.error('رقم العقد المختار غير صالح.');
+        return;
+      }
+
+      // Ensure invoice number exists
+      if (!invoiceNumber) {
+        const timestamp = Date.now();
+        const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        setInvoiceNumber(`INV-${timestamp}${randomSuffix}`);
+      }
 
       const payload: any = {
+        contract_number: firstContractNumber,
+        invoice_number: invoiceNumber || `INV-${Date.now()}`,
         customer_id: customerId ?? null,
         customer_name: customerName ?? null,
-        contract_number: !isNaN(firstContractNumber as number) && firstContractNumber !== null ? firstContractNumber : null,
-        contract_numbers: selectedContracts && selectedContracts.length > 0 ? selectedContracts.join(',') : null,
-        print_items: JSON.stringify(localPrintItems),
-        print_items_json: JSON.stringify(localPrintItems),
-        total_amount: Number(totalAmount) || 0,
-        invoice_number: invoiceNumber || null,
-        invoice_date: invoiceDate || null,
-        notes: notes || '',
-        currency: currency?.code || null,
+        printer_name: 'web', // required not null in DB
+        invoice_date: invoiceDate || new Date().toISOString().slice(0,10),
+        subtotal: subtotalValue,
         discount: Number(discount) || 0,
-        discount_type: discountType || null,
+        discount_type: discountType === 'percentage' ? 'percentage' : 'fixed',
+        discount_amount: discountAmountValue,
+        total: totalValue,
+        total_amount: totalValue,
+        items: localPrintItems, // stored in jsonb column
+        print_items: JSON.stringify(localPrintItems),
+        contract_numbers: selectedContracts && selectedContracts.length > 0 ? selectedContracts.join(',') : null,
+        notes: notes || '',
+        currency_code: currency?.code || null,
+        currency_symbol: currency?.symbol || null,
+        include_account_balance: includeAccountBalance ? true : false,
+        invoice_type: 'print',
         created_at: new Date().toISOString()
       };
 
       const { data, error } = await supabase.from('printed_invoices').insert(payload).select();
 
       if (error) {
-        // Improved logging of Supabase error object
         console.error('Failed to save printed invoice:', error);
         const errMsg = (error && (error.message || error.code)) ? `${error.message || error.code}` : JSON.stringify(error);
         toast.error(`فشل حفظ الفاتورة: ${errMsg}`);
@@ -903,7 +928,6 @@ export default function ModernPrintInvoiceDialog({
       }
 
       toast.success('تم حفظ الفاتورة بنجاح');
-      // call parent callback to finalize
       onSaveInvoice();
     } catch (e: any) {
       console.error('Error saving printed invoice:', e);
@@ -1026,7 +1050,7 @@ export default function ModernPrintInvoiceDialog({
       {/* Footer */}
       <div className="mt-8 text-center text-sm text-muted-foreground border-t border-border pt-4">
         شكراً لتعاملكم معنا | Thank you for your business<br />
-        هذه فاتو��ة إلكترونية ولا تحتاج إلى ختم أو توقيع
+        هذه فاتو��ة إل��ترونية ولا تحتاج إلى ختم أو توقيع
       </div>
     </div>
   );
