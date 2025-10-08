@@ -344,7 +344,7 @@ export default function ModernPrintInvoiceDialog({
       const size = String(billboard.Size ?? billboard.size ?? 'غير محدد');
       const faces = Number(billboard.Faces ?? billboard.faces ?? billboard.Number_of_Faces ?? billboard.Faces_Count ?? billboard.faces_count ?? 1);
       
-      // ✅ جلب الأبعاد من قاعدة البيانات
+      // ✅ جلب الأبعاد م�� قاعدة البيانات
       const dimensions = sizeDimensionsMap[size];
       const width = dimensions?.width || 0;
       const height = dimensions?.height || 0;
@@ -499,7 +499,7 @@ export default function ModernPrintInvoiceDialog({
         }
 
         // If this is a customer copy (not a printer copy), use the centralized HTML generator with prices
-        const isPrinterCopy = !!autoPrintForPrinter || !!printForPrinter;
+        const isPrinterCopy = Boolean(autoPrintForPrinter);
         const moneySubtotal = localPrintItems.reduce((s, it) => s + ((Number(it.width)||0) * (Number(it.height)||0) * (Number(it.totalFaces)||0) * (Number(it.pricePerMeter)||0)), 0);
         if (!isPrinterCopy) {
           const itemsForGenerator = displayItems.map(it => ({
@@ -980,7 +980,7 @@ export default function ModernPrintInvoiceDialog({
           <div className="text-sm text-muted-foreground">
             رقم الفاتورة: {invoiceNumber}<br />
             التاريخ: {new Date(invoiceDate).toLocaleDateString('ar-LY')}<br />
-            العملة: {currency.name}
+            العمل��: {currency.name}
           </div>
         </div>
       </div>
