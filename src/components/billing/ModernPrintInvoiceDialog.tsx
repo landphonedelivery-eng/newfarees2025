@@ -159,33 +159,38 @@ export default function ModernPrintInvoiceDialog({
     }
   };
 
-  // ✅ حساب الإجماليات الصحيح
-  const subtotal = useMemo(() => {
-    let facesTotal = 0;
-
+  // ✅ المجموعات: المجموع النقدي وإجمالي الأوجه
+  const moneySubtotal = useMemo(() => {
+    let sum = 0;
     localPrintItems.forEach((item, index) => {
-      const totalFaces = Number(item.totalFaces) || 0;
-      facesTotal += totalFaces;
-      console.log(`Item ${index} (${item.size}): totalFaces = ${totalFaces}`);
+      const itemTotal = Number(item.totalPrice) || ((Number(item.width) || 0) * (Number(item.height) || 0) * (Number(item.totalFaces) || 0) * (Number(item.pricePerMeter) || 0));
+      sum += itemTotal;
+      console.log(`Item ${index} (${item.size}): totalPrice = ${itemTotal}`);
     });
-
-    console.log('Final subtotal (faces) calculated:', facesTotal);
-    return facesTotal;
+    console.log('Final monetary subtotal calculated:', sum);
+    return sum;
   }, [localPrintItems]);
 
-  // Discount interpreted as percentage or fixed count of faces
+  const facesTotal = useMemo(() => {
+    return localPrintItems.reduce((s, it) => s + (Number(it.totalFaces) || 0), 0);
+  }, [localPrintItems]);
+
+  // Discount interpreted as percentage or fixed monetary amount
   const discountAmount = useMemo(() => {
     if (discountType === 'percentage') {
-      return Math.round((subtotal * discount) / 100);
+      return Math.round((moneySubtotal * discount) / 100);
     }
     return Number(discount) || 0;
-  }, [subtotal, discount, discountType]);
+  }, [moneySubtotal, discount, discountType]);
 
   const total = useMemo(() => {
-    let finalTotal = subtotal - discountAmount;
-    // includeAccountBalance and accountPayments are monetary; ignore when counting faces
+    let finalTotal = moneySubtotal - discountAmount;
+    // includeAccountBalance and accountPayments are monetary; account balance can be applied if needed
+    if (includeAccountBalance && accountPayments) {
+      finalTotal = finalTotal - Number(accountPayments || 0);
+    }
     return Math.max(0, finalTotal);
-  }, [subtotal, discountAmount]);
+  }, [moneySubtotal, discountAmount, includeAccountBalance, accountPayments]);
 
   useEffect(() => {
     if (open) {
@@ -843,20 +848,30 @@ export default function ModernPrintInvoiceDialog({
               </table>
 
               <div class="total-section">
-                ${discount > 0 ? `
+                ${facesTotal > 0 ? `
                   <div class="total-row subtotal">
                     <span>إجمالي الأوجه:</span>
-                    <span>${formatArabicNumber(subtotal)} وحدة</span>
+                    <span>${formatArabicNumber(facesTotal)} وحدة</span>
                   </div>
+                ` : ''}
+
+                ${moneySubtotal > 0 ? `
+                  <div class="total-row subtotal">
+                    <span>المجموع الفرعي:</span>
+                    <span>${formatArabicNumber(moneySubtotal)} ${currency.symbol}</span>
+                  </div>
+                ` : ''}
+
+                ${discount > 0 ? `
                   <div class="total-row discount">
-                    <span>خصم (${discountType === 'percentage' ? `${discount}%` : `${formatArabicNumber(discount)} وحدة`}):</span>
-                    <span>- ${formatArabicNumber(discountAmount)} وحدة</span>
+                    <span>خصم (${discountType === 'percentage' ? `${discount}%` : `${formatArabicNumber(discount)} ${currency.symbol}`}):</span>
+                    <span>- ${formatArabicNumber(discountAmount)} ${currency.symbol}</span>
                   </div>
                 ` : ''}
 
                 <div class="total-row grand-total">
-                  <span>العدد النهائي للأوجه:</span>
-                  <span class="currency">${formatArabicNumber(total)} وحدة</span>
+                  <span>الإجمالي النهائي:</span>
+                  <span class="currency">${formatArabicNumber(total)} ${currency.symbol}</span>
                 </div>
               </div>
               
@@ -1046,20 +1061,20 @@ export default function ModernPrintInvoiceDialog({
           <div className="flex justify-end">
             <div className="w-[400px]">
               <div className="flex justify-between py-2 text-sm">
-                <span>إجمالي الأوجه:</span>
-                <span className="expenses-amount-calculated font-bold">{formatArabicNumber(subtotal)} وحدة</span>
+                <span>المجموع الفرعي:</span>
+                <span className="expenses-amount-calculated font-bold">{formatArabicNumber(moneySubtotal)} {currency.symbol}</span>
               </div>
 
               {discount > 0 && (
                 <div className="flex justify-between py-2 text-sm text-green-400">
-                  <span>خصم ({discountType === 'percentage' ? `${discount}%` : `${formatArabicNumber(discount)} وحدة`}):</span>
-                  <span className="font-bold">- {formatArabicNumber(discountAmount)} وحدة</span>
+                  <span>خصم ({discountType === 'percentage' ? `${discount}%` : `${formatArabicNumber(discount)} ${currency.symbol}`}):</span>
+                  <span className="font-bold">- {formatArabicNumber(discountAmount)} {currency.symbol}</span>
                 </div>
               )}
 
               <div className="flex justify-between py-4 text-xl font-bold bg-primary text-primary-foreground px-6 rounded-lg mt-4">
-                <span>العدد النهائي للأوجه:</span>
-                <span className="text-primary-glow">{formatArabicNumber(total)} وحدة</span>
+                <span>الإجمالي ا��نهائي:</span>
+                <span className="text-primary-glow">{formatArabicNumber(total)} {currency.symbol}</span>
               </div>
 
             </div>
@@ -1295,7 +1310,7 @@ export default function ModernPrintInvoiceDialog({
                       عناصر الطباعة ({localPrintItems.length})
                       {localPrintItems.length > 0 && (
                         <span className="text-sm font-normal text-muted-foreground">
-                          - المجموع: {formatArabicNumber(subtotal)} {currency.symbol}
+                          - المجموع: {formatArabicNumber(moneySubtotal)} {currency.symbol}
                         </span>
                       )}
                     </CardTitle>
@@ -1305,7 +1320,7 @@ export default function ModernPrintInvoiceDialog({
                       <div className="expenses-empty-state py-12">
                         <Calculator className="h-16 w-16 mx-auto mb-4 opacity-50" />
                         <p className="text-lg">لا توجد عقود محددة</p>
-                        <p className="text-sm">يرجى اختيار العقود أولاً لعرض عناصر الطباعة</p>
+                        <p className="text-sm">��رجى اختيار العقود أولاً لعرض عناصر الطباعة</p>
                       </div>
                     ) : localPrintItems.length === 0 ? (
                       <div className="expenses-empty-state py-12">
@@ -1384,7 +1399,7 @@ export default function ModernPrintInvoiceDialog({
                       <div className="space-y-3">
                         <div className="flex justify-between text-sm">
                           <span>المجموع الفرعي:</span>
-                          <span className="expenses-amount-calculated font-bold">{formatArabicNumber(subtotal)} {currency.symbol}</span>
+                          <span className="expenses-amount-calculated font-bold">{formatArabicNumber(moneySubtotal)} {currency.symbol}</span>
                         </div>
                         {discount > 0 && (
                           <div className="flex justify-between text-sm stat-green">
