@@ -34,20 +34,7 @@ export const generateModernPrintInvoiceHTML = (data: ModernPrintInvoiceData): st
     displayItems.push({ size: '', quantity: '', faces: '', totalFaces: '', width: '', height: '', area: '', pricePerMeter: '', totalPrice: '' } as any);
   }
 
-  const rowsHtml = displayItems.map(item => {
-    if (data.hidePrices) {
-      return `
-      <tr>
-        <td style="padding:8px">${item.size || ''}</td>
-        <td style="padding:8px">${item.quantity ?? ''}</td>
-        <td style="padding:8px">${item.faces ?? ''}</td>
-        <td style="padding:8px">${item.totalFaces ?? ''}</td>
-        <td style="padding:8px">${item.width ?? ''} × ${item.height ?? ''}</td>
-        <td style="padding:8px">${Number(item.area || 0).toFixed(2)} م²</td>
-      </tr>
-    `;
-    }
-    return `
+  const rowsHtml = displayItems.map(item => `
     <tr>
       <td style="padding:8px">${item.size || ''}</td>
       <td style="padding:8px">${item.quantity ?? ''}</td>
@@ -55,11 +42,8 @@ export const generateModernPrintInvoiceHTML = (data: ModernPrintInvoiceData): st
       <td style="padding:8px">${item.totalFaces ?? ''}</td>
       <td style="padding:8px">${item.width ?? ''} × ${item.height ?? ''}</td>
       <td style="padding:8px">${Number(item.area || 0).toFixed(2)} م²</td>
-      <td style="padding:8px">${(Number(item.pricePerMeter || 0)).toLocaleString('ar-LY')}</td>
-      <td style="padding:8px">${(Number(item.totalPrice || 0)).toLocaleString('ar-LY')} د.ل</td>
     </tr>
-  `;
-  }).join('');
+  `).join('');
 
   // Full header + footer to match the dialog preview
   const html = `<!DOCTYPE html>
