@@ -202,28 +202,38 @@ export default function ModernPrintInvoiceDialog({
       if (initialInvoice) {
         try {
           const inv = initialInvoice as any;
-          // parse print_items if necessary
+          // parse print items from multiple possible fields (print_items, print_items_json, items, items_json)
           let items: any[] = [];
-          if (inv.print_items && typeof inv.print_items === 'string') {
-            items = JSON.parse(inv.print_items);
-          } else if (inv.print_items && Array.isArray(inv.print_items)) {
-            items = inv.print_items;
-          } else if (inv.print_items_json && typeof inv.print_items_json === 'string') {
-            try { items = JSON.parse(inv.print_items_json); } catch (e) { items = []; }
+          const possible = inv.print_items ?? inv.print_items_json ?? inv.items ?? inv.items_json ?? null;
+
+          if (possible) {
+            try {
+              if (typeof possible === 'string') {
+                const parsed = JSON.parse(possible);
+                if (Array.isArray(parsed)) items = parsed;
+              } else if (Array.isArray(possible)) {
+                items = possible;
+              } else if (Array.isArray(inv.items)) {
+                items = inv.items;
+              }
+            } catch (e) {
+              console.warn('Failed to parse invoice items from initialInvoice', e);
+              items = [];
+            }
           }
 
           setLocalPrintItems((items || []).map((it:any) => ({
-            size: it.size || '',
-            quantity: Number(it.quantity) || 0,
-            faces: Number(it.faces) || 0,
-            totalFaces: Number(it.totalFaces) || 0,
-            area: Number(it.area) || 0,
-            pricePerMeter: Number(it.pricePerMeter) || 0,
-            totalArea: Number(it.totalArea) || 0,
-            totalPrice: Number(it.totalPrice) || 0,
-            sortOrder: Number(it.sortOrder) || 0,
-            width: Number(it.width) || 0,
-            height: Number(it.height) || 0,
+            size: it.size || it.name || '',
+            quantity: Number(it.quantity ?? it.qty ?? 0) || 0,
+            faces: Number(it.faces ?? it.face_count ?? it.Number_of_Faces ?? 0) || 0,
+            totalFaces: Number(it.totalFaces ?? it.total_faces ?? 0) || 0,
+            area: Number(it.area ?? it.area_m2 ?? (Number(it.width || 0) * Number(it.height || 0)) || 0) || 0,
+            pricePerMeter: Number(it.pricePerMeter ?? it.print_price ?? it.price || 0) || 0,
+            totalArea: Number(it.totalArea ?? it.total_area ?? 0) || 0,
+            totalPrice: Number(it.totalPrice ?? it.total_price ?? it.price_total ?? 0) || 0,
+            sortOrder: Number(it.sortOrder ?? it.sort_order ?? 0) || 0,
+            width: Number(it.width || it.w || 0) || 0,
+            height: Number(it.height || it.h || 0) || 0,
           })));
 
           if (inv.invoice_number) setInvoiceNumber(inv.invoice_number);
@@ -451,7 +461,7 @@ export default function ModernPrintInvoiceDialog({
       return;
     }
 
-    // ✅ استخدام نف�� تصميم الفاتورة من الكود المرجعي
+    // ✅ استخدام نفس تصميم الفاتورة من الكود المرجعي
     const printInvoice = async () => {
       try {
         const testWindow = window.open('', '_blank', 'width=1,height=1');
@@ -1034,7 +1044,7 @@ export default function ModernPrintInvoiceDialog({
               </div>
 
               <div className="text-center mt-4 text-sm text-muted-foreground">
-                المبلغ بالكلمات: {formatArabicNumber(total)} {currency.writtenName}
+                المبلغ ب��لكلمات: {formatArabicNumber(total)} {currency.writtenName}
               </div>
             </div>
           </div>
@@ -1050,7 +1060,7 @@ export default function ModernPrintInvoiceDialog({
       {/* Footer */}
       <div className="mt-8 text-center text-sm text-muted-foreground border-t border-border pt-4">
         شكراً لتعاملكم معنا | Thank you for your business<br />
-        هذه فاتو��ة إل��ترونية ولا تحتاج إلى ختم أو توقيع
+        هذه فاتو��ة إلكترونية ولا تحتاج إلى ختم أو توقيع
       </div>
     </div>
   );
@@ -1401,7 +1411,7 @@ export default function ModernPrintInvoiceDialog({
               disabled={localPrintItems.length === 0}
             >
               <Printer className="h-4 w-4" />
-              طباعة الفاتورة
+              طباعة الفا��ورة
             </Button>
           </div>
         </div>
