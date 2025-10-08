@@ -71,7 +71,7 @@ interface ModernPrintInvoiceDialogProps {
 
 const CURRENCIES = [
   { code: 'LYD', name: 'دينار ليبي', symbol: 'د.ل', writtenName: 'دينار ليبي' },
-  { code: 'USD', name: 'دولار أمريكي', symbol: '$', writtenName: 'دولار أمريكي' },
+  { code: 'USD', name: 'دولار أمريكي', symbol: '$', writtenName: 'دو��ار أمريكي' },
   { code: 'EUR', name: 'يورو', symbol: '€', writtenName: 'يورو' },
 ];
 
@@ -748,8 +748,8 @@ export default function ModernPrintInvoiceDialog({
                 <div class="customer-title">بيانات العميل</div>
                 <div class="customer-details">
                   <strong>الاسم:</strong> ${customerName}<br>
-                  <strong>العقود المرتبطة:</strong> ${selectedContracts.join(', ')}<br>
-                  <strong>��اريخ الفاتورة:</strong> ${formattedDate}
+                  <strong>العقود المرتبط��:</strong> ${selectedContracts.join(', ')}<br>
+                  <strong>تاريخ الفاتورة:</strong> ${formattedDate}
                 </div>
               </div>
               
@@ -851,7 +851,7 @@ export default function ModernPrintInvoiceDialog({
         printWindow.document.write(htmlContent);
         printWindow.document.close();
 
-        toast.success(`تم فتح الفاتورة للطباع�� بنجاح بعملة ${currency.name}!`);
+        toast.success(`تم فتح الفاتورة للطباعة بنجاح بعملة ${currency.name}!`);
 
       } catch (error) {
         console.error('Error in print invoice:', error);
@@ -871,34 +871,44 @@ export default function ModernPrintInvoiceDialog({
 
     try {
       const totalAmount = localPrintItems.reduce((s, it) => s + (Number(it.totalPrice) || 0), 0);
+
+      // Ensure contract_number (singular) provided if DB requires it
+      const firstContractNumber = selectedContracts && selectedContracts.length > 0 ? Number(selectedContracts[0]) : null;
+
       const payload: any = {
-        customer_id: customerId || null,
-        customer_name: customerName,
-        contract_numbers: selectedContracts.join(','),
+        customer_id: customerId ?? null,
+        customer_name: customerName ?? null,
+        contract_number: !isNaN(firstContractNumber as number) && firstContractNumber !== null ? firstContractNumber : null,
+        contract_numbers: selectedContracts && selectedContracts.length > 0 ? selectedContracts.join(',') : null,
         print_items: JSON.stringify(localPrintItems),
-        total_amount: totalAmount,
-        invoice_number: invoiceNumber,
-        invoice_date: invoiceDate,
+        print_items_json: JSON.stringify(localPrintItems),
+        total_amount: Number(totalAmount) || 0,
+        invoice_number: invoiceNumber || null,
+        invoice_date: invoiceDate || null,
         notes: notes || '',
-        currency: currency.code,
-        discount: discount || 0,
-        discount_type: discountType,
+        currency: currency?.code || null,
+        discount: Number(discount) || 0,
+        discount_type: discountType || null,
         created_at: new Date().toISOString()
       };
 
       const { data, error } = await supabase.from('printed_invoices').insert(payload).select();
+
       if (error) {
+        // Improved logging of Supabase error object
         console.error('Failed to save printed invoice:', error);
-        toast.error('فشل حفظ الفاتورة');
+        const errMsg = (error && (error.message || error.code)) ? `${error.message || error.code}` : JSON.stringify(error);
+        toast.error(`فشل حفظ الفاتورة: ${errMsg}`);
         return;
       }
 
       toast.success('تم حفظ الفاتورة بنجاح');
       // call parent callback to finalize
       onSaveInvoice();
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error saving printed invoice:', e);
-      toast.error('خطأ أثناء حفظ الفاتورة');
+      const message = e?.message || String(e);
+      toast.error(`خطأ أثناء حفظ الفاتورة: ${message}`);
     }
   };
 
@@ -982,7 +992,7 @@ export default function ModernPrintInvoiceDialog({
               
               {discount > 0 && (
                 <div className="flex justify-between py-2 text-sm text-green-400">
-                  <span>خص�� ({discountType === 'percentage' ? `${discount}%` : `${formatArabicNumber(discount)} ${currency.symbol}`}):</span>
+                  <span>خصم ({discountType === 'percentage' ? `${discount}%` : `${formatArabicNumber(discount)} ${currency.symbol}`}):</span>
                   <span className="font-bold">- {formatArabicNumber(discountAmount)} {currency.symbol}</span>
                 </div>
               )}
@@ -1016,7 +1026,7 @@ export default function ModernPrintInvoiceDialog({
       {/* Footer */}
       <div className="mt-8 text-center text-sm text-muted-foreground border-t border-border pt-4">
         شكراً لتعاملكم معنا | Thank you for your business<br />
-        هذه فاتورة إلكترونية ولا تحتاج إلى ختم أو توقيع
+        هذه فاتو��ة إلكترونية ولا تحتاج إلى ختم أو توقيع
       </div>
     </div>
   );
