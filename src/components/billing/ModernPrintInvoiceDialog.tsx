@@ -159,42 +159,31 @@ export default function ModernPrintInvoiceDialog({
 
   // ✅ حساب الإجماليات الصحيح
   const subtotal = useMemo(() => {
-    let calculatedTotal = 0;
-    
+    let facesTotal = 0;
+
     localPrintItems.forEach((item, index) => {
-      // ✅ الحساب الصحيح: العرض × الارتفاع × عدد الأوجه × سعر ا��متر
-      const width = Number(item.width) || 0;
-      const height = Number(item.height) || 0;
       const totalFaces = Number(item.totalFaces) || 0;
-      const pricePerMeter = Number(item.pricePerMeter) || 0;
-      
-      const itemTotal = width * height * totalFaces * pricePerMeter;
-      
-      console.log(`Item ${index} (${item.size}): ${width} × ${height} × ${totalFaces} × ${pricePerMeter} = ${itemTotal}`);
-      
-      if (!isNaN(itemTotal) && itemTotal > 0) {
-        calculatedTotal += itemTotal;
-      }
+      facesTotal += totalFaces;
+      console.log(`Item ${index} (${item.size}): totalFaces = ${totalFaces}`);
     });
-    
-    console.log('Final subtotal calculated:', calculatedTotal);
-    return calculatedTotal;
+
+    console.log('Final subtotal (faces) calculated:', facesTotal);
+    return facesTotal;
   }, [localPrintItems]);
 
+  // Discount interpreted as percentage or fixed count of faces
   const discountAmount = useMemo(() => {
     if (discountType === 'percentage') {
-      return (subtotal * discount) / 100;
+      return Math.round((subtotal * discount) / 100);
     }
-    return discount;
+    return Number(discount) || 0;
   }, [subtotal, discount, discountType]);
 
   const total = useMemo(() => {
     let finalTotal = subtotal - discountAmount;
-    if (includeAccountBalance && accountPayments > 0) {
-      finalTotal -= accountPayments;
-    }
+    // includeAccountBalance and accountPayments are monetary; ignore when counting faces
     return Math.max(0, finalTotal);
-  }, [subtotal, discountAmount, includeAccountBalance, accountPayments]);
+  }, [subtotal, discountAmount]);
 
   useEffect(() => {
     if (open) {
@@ -341,7 +330,7 @@ export default function ModernPrintInvoiceDialog({
 
     } catch (error) {
       console.error('Error fetching billboards from contracts:', error);
-      toast.error('حدث خطأ في جلب بيانات اللوحات');
+      toast.error('حدث خطأ في جلب بي��نات اللوحات');
       setLocalPrintItems([]);
     }
   };
@@ -384,7 +373,7 @@ export default function ModernPrintInvoiceDialog({
       groupedBillboards[groupKey].totalArea += area;
     });
 
-    // ✅ حساب الأسعار الإجمالية وترتيب النتائج
+    // ✅ حساب الأسعار الإج��الية وترتيب النتائج
     const result = Object.values(groupedBillboards).map(item => {
       // ✅ الحساب الصحيح: العرض × الارتفاع × عدد الأوجه × سعر المتر
       const calculatedPrice = item.width * item.height * item.totalFaces * item.pricePerMeter;
@@ -869,7 +858,7 @@ export default function ModernPrintInvoiceDialog({
         printWindow.document.write(htmlContent);
         printWindow.document.close();
 
-        toast.success(`تم فتح الفاتورة للطباعة بنجاح بعملة ${currency.name}!`);
+        toast.success(`تم فتح الفاتورة للطباعة بنجاح بع��لة ${currency.name}!`);
 
       } catch (error) {
         console.error('Error in print invoice:', error);
