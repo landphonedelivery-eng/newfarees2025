@@ -6,7 +6,7 @@ import { loadBillboards } from '@/services/billboardService';
 import { addBillboardsToContract, getContractWithBillboards, removeBillboardFromContract, updateContract } from '@/services/contractService';
 import { calculateInstallationCostFromIds } from '@/services/installationService';
 import { getPriceFor, getDailyPriceFor, CustomerType } from '@/data/pricing';
-import { ContractPDFDialog } from '@/components/contract';
+import { ContractPDFDialog } from '@/components/Contract';
 import type { Billboard } from '@/types';
 
 // Import modular components
@@ -451,7 +451,7 @@ export default function ContractEditModular() {
           amount: half, 
           paymentType: 'عند التوقيع', 
           description: 'الدفعة الأولى',
-          dueDate: calculateDueDate('عند التوقيع', 0)
+          dueDate: calculateDueDate('عند ال��وقيع', 0)
         },
         { 
           amount: finalTotal - half, 
