@@ -110,7 +110,7 @@ export const generateModernPrintInvoiceHTML = (data: ModernPrintInvoiceData): st
 
       <div class="customer-info">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-          <div><strong>العميل:</strong> ${data.customerName || ''}</div>
+          <div><strong>العم��ل:</strong> ${data.customerName || ''}</div>
           <div style="direction:ltr">التاريخ: ${new Date(data.invoiceDate).toLocaleDateString('ar-LY')}</div>
         </div>
       </div>
@@ -124,7 +124,6 @@ export const generateModernPrintInvoiceHTML = (data: ModernPrintInvoiceData): st
             <th>إجمالي الأوجه</th>
             <th>الأبعاد (م)</th>
             <th>المساحة/الوجه</th>
-            ${data.hidePrices ? '' : '<th>سعر المتر</th><th>إجمالي السعر</th>'}
           </tr>
         </thead>
         <tbody>
@@ -132,17 +131,14 @@ export const generateModernPrintInvoiceHTML = (data: ModernPrintInvoiceData): st
         </tbody>
       </table>
 
-      ${data.hidePrices ? '' : `
       <div class="totals">
         <div class="box">
           <div style="display:flex;justify-content:space-between;font-weight:700;font-size:16px">
-            <div>المجموع الإجمالي:</div>
-            <div style="direction:ltr">${data.totalAmount.toLocaleString('ar-LY')} د.ل</div>
+            <div>إجمالي الأوجه:</div>
+            <div style="direction:ltr">${Number(data.totalAmount || 0).toLocaleString('ar-LY')} وحدة</div>
           </div>
-          <div style="margin-top:8px">المبلغ بالكلمات: ${data.totalAmount ? numberToArabicWords(Number(data.totalAmount)) : ''} ${data.totalAmount ? 'د.ل' : ''}</div>
         </div>
       </div>
-      `}
 
       <div class="notes">${data.notes || ''}</div>
 
