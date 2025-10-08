@@ -126,7 +126,7 @@ export default function ModernPrintInvoiceDialog({
   const [sizeOrderMap, setSizeOrderMap] = useState<{ [key: string]: number }>({});
   const [sizeDimensionsMap, setSizeDimensionsMap] = useState<{ [key: string]: { width: number; height: number } }>({});
 
-  // ✅ جلب بيانات الأحجام من قاعدة البيانات مع الأبعاد
+  // ✅ جلب بيانات الأحجام من قا��دة البيانات مع الأبعاد
   const fetchSizeData = async () => {
     try {
       const { data: sizesData, error } = await supabase
@@ -430,7 +430,7 @@ export default function ModernPrintInvoiceDialog({
       item.totalArea = item.area * item.totalFaces;
     }
     
-    // ✅ الحساب الصحيح: العرض × الارتفاع × عدد الأوج�� × سعر المتر
+    // ✅ الحساب الصحيح: العرض × الارتفاع × ��دد الأوج�� × سعر المتر
     item.totalPrice = item.width * item.height * item.totalFaces * item.pricePerMeter;
     
     updatedItems[index] = item;
@@ -780,7 +780,7 @@ export default function ModernPrintInvoiceDialog({
                       <tr class="${isEmpty ? 'empty-row' : ''}">
                         <td>${isEmpty ? '' : index + 1}</td>
                         <td style="text-align: right; padding-right: 8px;">
-                          ${isEmpty ? '' : `لوحة إعلانية مقاس ${item.size}`}
+                          ${isEmpty ? '' : `لوحة إعلا��ية مقاس ${item.size}`}
                         </td>
                         <td>${isEmpty ? '' : (typeof item.quantity === 'number' ? formatArabicNumber(item.quantity) : item.quantity)}</td>
                         <td>${isEmpty ? '' : (typeof item.faces === 'number' ? item.faces : item.faces)}</td>
@@ -973,8 +973,6 @@ export default function ModernPrintInvoiceDialog({
                   <th className="border border-border p-3 text-center font-bold">إجمالي الأوجه</th>
                   <th className="border border-border p-3 text-center font-bold">الأبعاد (م)</th>
                   <th className="border border-border p-3 text-center font-bold">المساحة/الوجه</th>
-                  <th className="border border-border p-3 text-center font-bold">سعر المتر</th>
-                  <th className="border border-border p-3 text-center font-bold">إجمالي السعر</th>
                 </tr>
               </thead>
               <tbody>
@@ -986,8 +984,6 @@ export default function ModernPrintInvoiceDialog({
                     <td className="border border-border p-3 text-center font-medium">{formatArabicNumber(item.totalFaces)}</td>
                     <td className="border border-border p-3 text-center">{item.width} × {item.height}</td>
                     <td className="border border-border p-3 text-center">{item.area.toFixed(2)} م²</td>
-                    <td className="border border-border p-3 text-center">{formatArabicNumber(item.pricePerMeter)} {currency.symbol}</td>
-                    <td className="border border-border p-3 text-center expenses-amount-calculated font-bold">{formatArabicNumber(item.totalPrice)} {currency.symbol}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1002,32 +998,22 @@ export default function ModernPrintInvoiceDialog({
           <div className="flex justify-end">
             <div className="w-[400px]">
               <div className="flex justify-between py-2 text-sm">
-                <span>المجموع الفرعي:</span>
-                <span className="expenses-amount-calculated font-bold">{formatArabicNumber(subtotal)} {currency.symbol}</span>
+                <span>إجمالي الأوجه:</span>
+                <span className="expenses-amount-calculated font-bold">{formatArabicNumber(subtotal)} وحدة</span>
               </div>
-              
+
               {discount > 0 && (
                 <div className="flex justify-between py-2 text-sm text-green-400">
-                  <span>خصم ({discountType === 'percentage' ? `${discount}%` : `${formatArabicNumber(discount)} ${currency.symbol}`}):</span>
-                  <span className="font-bold">- {formatArabicNumber(discountAmount)} {currency.symbol}</span>
-                </div>
-              )}
-
-              {includeAccountBalance && accountPayments > 0 && (
-                <div className="flex justify-between py-2 text-sm stat-blue">
-                  <span>رصيد الحساب:</span>
-                  <span className="font-bold">- {formatArabicNumber(accountPayments)} {currency.symbol}</span>
+                  <span>خصم ({discountType === 'percentage' ? `${discount}%` : `${formatArabicNumber(discount)} وحدة`}):</span>
+                  <span className="font-bold">- {formatArabicNumber(discountAmount)} وحدة</span>
                 </div>
               )}
 
               <div className="flex justify-between py-4 text-xl font-bold bg-primary text-primary-foreground px-6 rounded-lg mt-4">
-                <span>المجموع الإجمالي:</span>
-                <span className="text-primary-glow">{formatArabicNumber(total)} {currency.symbol}</span>
+                <span>العدد النهائي للأوجه:</span>
+                <span className="text-primary-glow">{formatArabicNumber(total)} وحدة</span>
               </div>
 
-              <div className="text-center mt-4 text-sm text-muted-foreground">
-                المبلغ بالكلمات: {formatArabicNumber(total)} {currency.writtenName}
-              </div>
             </div>
           </div>
         </div>
