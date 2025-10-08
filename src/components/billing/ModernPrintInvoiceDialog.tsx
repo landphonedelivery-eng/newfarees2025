@@ -76,7 +76,7 @@ const CURRENCIES = [
   { code: 'EUR', name: 'يورو', symbol: '€', writtenName: 'يورو' },
 ];
 
-// ✅ دالة تنسيق الأرقام ال��ربية
+// ✅ دالة تنسيق الأرقام العربية
 const formatArabicNumber = (num: number): string => {
   if (isNaN(num) || num === null || num === undefined) return '0';
   
@@ -380,7 +380,7 @@ export default function ModernPrintInvoiceDialog({
       groupedBillboards[groupKey].totalArea += area;
     });
 
-    // ✅ حساب الأسعار الإج��الية و��رتيب النتائج
+    // ✅ حساب الأسعار الإج��الية وترتيب النتائج
     const result = Object.values(groupedBillboards).map(item => {
       // ✅ الحساب الصحيح: العرض × الارتفاع × عدد الأوجه × سعر المتر
       const calculatedPrice = item.width * item.height * item.totalFaces * item.pricePerMeter;
@@ -824,24 +824,31 @@ export default function ModernPrintInvoiceDialog({
                   </div>
                 ` : ''}
 
-                ${moneySubtotal > 0 ? `
+                ${!isPrinterCopy && moneySubtotal > 0 ? `
                   <div class="total-row subtotal">
                     <span>المجموع الفرعي:</span>
                     <span>${formatArabicNumber(moneySubtotal)} ${currency.symbol}</span>
                   </div>
                 ` : ''}
 
-                ${discount > 0 ? `
+                ${!isPrinterCopy && discount > 0 ? `
                   <div class="total-row discount">
                     <span>خصم (${discountType === 'percentage' ? `${discount}%` : `${formatArabicNumber(discount)} ${currency.symbol}`}):</span>
                     <span>- ${formatArabicNumber(discountAmount)} ${currency.symbol}</span>
                   </div>
                 ` : ''}
 
-                <div class="total-row grand-total">
-                  <span>الإجمالي النهائي:</span>
-                  <span class="currency">${formatArabicNumber(total)} ${currency.symbol}</span>
-                </div>
+                ${isPrinterCopy ? `
+                  <div class="total-row grand-total">
+                    <span>العدد النهائي للأوجه:</span>
+                    <span class="currency">${formatArabicNumber(facesTotal)} وحدة</span>
+                  </div>
+                ` : `
+                  <div class="total-row grand-total">
+                    <span>الإجمالي النهائي:</span>
+                    <span class="currency">${formatArabicNumber(total)} ${currency.symbol}</span>
+                  </div>
+                `}
               </div>
               
               <div class="footer">
@@ -947,7 +954,7 @@ export default function ModernPrintInvoiceDialog({
       if (error) {
         console.error('Failed to save printed invoice:', error);
         const errMsg = (error && (error.message || error.code)) ? `${error.message || error.code}` : JSON.stringify(error);
-        toast.error(`فشل حفظ ال��اتورة: ${errMsg}`);
+        toast.error(`فشل حفظ الفاتورة: ${errMsg}`);
         return;
       }
 
@@ -1005,7 +1012,7 @@ export default function ModernPrintInvoiceDialog({
                   <th className="border border-border p-3 text-center font-bold">إجمالي الأوجه</th>
                   <th className="border border-border p-3 text-center font-bold">الأبعاد (م)</th>
                   <th className="border border-border p-3 text-center font-bold">المساحة/الوجه</th>
-                  <th className="border border-border p-3 text-center font-bold">سعر المتر ({currency.symbol})</th>
+                  <th className="border border-border p-3 text-center font-bold">س��ر المتر ({currency.symbol})</th>
                   <th className="border border-border p-3 text-center font-bold">الإجمالي ({currency.symbol})</th>
                 </tr>
               </thead>
@@ -1038,7 +1045,7 @@ export default function ModernPrintInvoiceDialog({
           <div className="flex justify-end">
             <div className="w-[400px]">
               <div className="flex justify-between py-2 text-sm">
-                <span>المجموع ا��فرعي:</span>
+                <span>المجموع الفرعي:</span>
                 <span className="expenses-amount-calculated font-bold">{formatArabicNumber(moneySubtotal)} {currency.symbol}</span>
               </div>
 
@@ -1218,7 +1225,7 @@ export default function ModernPrintInvoiceDialog({
                             onClick={(e) => e.stopPropagation()}
                           />
                           <div className="flex-1">
-                            <div className="expenses-contract-number text-sm">عقد رقم {contract.Contract_Number}</div>
+                            <div className="expenses-contract-number text-sm">ع��د رقم {contract.Contract_Number}</div>
                             <div className="expenses-preview-text text-xs">{contract['Ad Type']}</div>
                           </div>
                           <Badge variant="outline" className="border-primary text-primary text-xs px-2 py-1">
@@ -1303,7 +1310,7 @@ export default function ModernPrintInvoiceDialog({
                       <div className="expenses-empty-state py-12">
                         <Calculator className="h-16 w-16 mx-auto mb-4 opacity-50" />
                         <p className="text-lg">لا توجد عناصر للطباعة</p>
-                        <p className="text-sm">لم يتم العثور على لوحات مرتبطة ��العقود المحددة</p>
+                        <p className="text-sm">لم يتم العثور على لوحات مرتبطة بالعقود المحددة</p>
                       </div>
                     ) : (
                       <div className="space-y-4">
