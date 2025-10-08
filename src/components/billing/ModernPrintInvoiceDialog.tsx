@@ -96,6 +96,7 @@ const formatArabicNumber = (num: number): string => {
 export default function ModernPrintInvoiceDialog({
   open,
   onClose,
+  customerId,
   customerName,
   contracts,
   selectedContracts,
@@ -107,7 +108,11 @@ export default function ModernPrintInvoiceDialog({
   onIncludeAccountBalance,
   accountPayments,
   onPrintInvoice,
-  onSaveInvoice
+  onSaveInvoice,
+  initialInvoice,
+  openToPreview,
+  autoPrint,
+  autoPrintForPrinter
 }: ModernPrintInvoiceDialogProps) {
   const [activeTab, setActiveTab] = useState<'setup' | 'preview'>('setup');
   const [currency, setCurrency] = useState(CURRENCIES[0]);
@@ -744,7 +749,7 @@ export default function ModernPrintInvoiceDialog({
                 <div class="customer-details">
                   <strong>الاسم:</strong> ${customerName}<br>
                   <strong>العقود المرتبطة:</strong> ${selectedContracts.join(', ')}<br>
-                  <strong>تاريخ الفاتورة:</strong> ${formattedDate}
+                  <strong>��اريخ الفاتورة:</strong> ${formattedDate}
                 </div>
               </div>
               
@@ -846,7 +851,7 @@ export default function ModernPrintInvoiceDialog({
         printWindow.document.write(htmlContent);
         printWindow.document.close();
 
-        toast.success(`تم فتح الفاتورة للطباعة بنجاح بعملة ${currency.name}!`);
+        toast.success(`تم فتح الفاتورة للطباع�� بنجاح بعملة ${currency.name}!`);
 
       } catch (error) {
         console.error('Error in print invoice:', error);
@@ -977,7 +982,7 @@ export default function ModernPrintInvoiceDialog({
               
               {discount > 0 && (
                 <div className="flex justify-between py-2 text-sm text-green-400">
-                  <span>خصم ({discountType === 'percentage' ? `${discount}%` : `${formatArabicNumber(discount)} ${currency.symbol}`}):</span>
+                  <span>خص�� ({discountType === 'percentage' ? `${discount}%` : `${formatArabicNumber(discount)} ${currency.symbol}`}):</span>
                   <span className="font-bold">- {formatArabicNumber(discountAmount)} {currency.symbol}</span>
                 </div>
               )}
