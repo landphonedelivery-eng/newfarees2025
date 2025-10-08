@@ -34,7 +34,20 @@ export const generateModernPrintInvoiceHTML = (data: ModernPrintInvoiceData): st
     displayItems.push({ size: '', quantity: '', faces: '', totalFaces: '', width: '', height: '', area: '', pricePerMeter: '', totalPrice: '' } as any);
   }
 
-  const rowsHtml = displayItems.map(item => `
+  const rowsHtml = displayItems.map(item => {
+    if (data.hidePrices) {
+      return `
+      <tr>
+        <td style="padding:8px">${item.size || ''}</td>
+        <td style="padding:8px">${item.quantity ?? ''}</td>
+        <td style="padding:8px">${item.faces ?? ''}</td>
+        <td style="padding:8px">${item.totalFaces ?? ''}</td>
+        <td style="padding:8px">${item.width ?? ''} × ${item.height ?? ''}</td>
+        <td style="padding:8px">${Number(item.area || 0).toFixed(2)} م²</td>
+      </tr>
+    `;
+    }
+    return `
     <tr>
       <td style="padding:8px">${item.size || ''}</td>
       <td style="padding:8px">${item.quantity ?? ''}</td>
@@ -42,8 +55,11 @@ export const generateModernPrintInvoiceHTML = (data: ModernPrintInvoiceData): st
       <td style="padding:8px">${item.totalFaces ?? ''}</td>
       <td style="padding:8px">${item.width ?? ''} × ${item.height ?? ''}</td>
       <td style="padding:8px">${Number(item.area || 0).toFixed(2)} م²</td>
+      <td style="padding:8px">${(Number(item.pricePerMeter || 0)).toLocaleString('ar-LY')}</td>
+      <td style="padding:8px">${(Number(item.totalPrice || 0)).toLocaleString('ar-LY')} د.ل</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 
   // Full header + footer to match the dialog preview
   const html = `<!DOCTYPE html>
@@ -110,7 +126,7 @@ export const generateModernPrintInvoiceHTML = (data: ModernPrintInvoiceData): st
 
       <div class="customer-info">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-          <div><strong>العم��ل:</strong> ${data.customerName || ''}</div>
+          <div><strong>العميل:</strong> ${data.customerName || ''}</div>
           <div style="direction:ltr">التاريخ: ${new Date(data.invoiceDate).toLocaleDateString('ar-LY')}</div>
         </div>
       </div>
@@ -169,7 +185,7 @@ export const numberToArabicWords = (num: number): string => {
   if (num < 1000) {
     const hundred = Math.floor(num / 100);
     const remainder = num % 100;
-    return ones[hundred] + ' مائة' + (remainder > 0 ? ' و' + numberToArabicWords(remainder) : '');
+    return ones[hundred] + ' مائة' + (remainder > 0 ? ' ��' + numberToArabicWords(remainder) : '');
   }
   if (num < 1000000) {
     const thousand = Math.floor(num / 1000);
