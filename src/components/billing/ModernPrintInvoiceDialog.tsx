@@ -501,6 +501,10 @@ export default function ModernPrintInvoiceDialog({
         // If this is a customer copy (not a printer copy), use the centralized HTML generator with prices
         const isPrinterCopy = Boolean(autoPrintForPrinter);
         const moneySubtotal = localPrintItems.reduce((s, it) => s + ((Number(it.width)||0) * (Number(it.height)||0) * (Number(it.totalFaces)||0) * (Number(it.pricePerMeter)||0)), 0);
+
+        const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no';
+        let printWindow: Window | null = null;
+
         if (!isPrinterCopy) {
           const itemsForGenerator = displayItems.map(it => ({
             size: it.size || '',
@@ -525,6 +529,12 @@ export default function ModernPrintInvoiceDialog({
             printerName: 'web',
             hidePrices: false,
           });
+
+          printWindow = window.open('', '_blank', windowFeatures);
+          if (!printWindow) {
+            toast.error('فشل فتح نافذة الطباعة. يرجى السماح بالنوافذ المنبثقة.');
+            return;
+          }
 
           printWindow.document.open();
           printWindow.document.write(html);
@@ -865,14 +875,13 @@ export default function ModernPrintInvoiceDialog({
           </html>
         `;
 
-        const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no';
-        const printWindow = window.open('', '_blank', windowFeatures);
-
+        // ensure printWindow variable from above or open new window
+        printWindow = printWindow || window.open('', '_blank', windowFeatures);
         if (!printWindow) {
           throw new Error('فشل في فتح نافذة الطباعة. يرجى التحقق من إعدادات المتصفح والسماح بالنوافذ المنبثقة.');
         }
 
-        // ✅ تعي��ن عنوان النافذة مع معلومات العميل والعقود والتاريخ
+        // ✅ تعيين عنوان النافذة مع معلومات العميل والعقود والتاريخ
         printWindow.document.title = fileName;
 
         printWindow.document.open();
