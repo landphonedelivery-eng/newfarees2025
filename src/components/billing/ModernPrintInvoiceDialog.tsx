@@ -794,6 +794,9 @@ export default function ModernPrintInvoiceDialog({
                 <tbody>
                   ${displayItems.map((item, index) => {
                     const isEmpty = !item.size;
+                    const pricePerMeterVal = Number(item.pricePerMeter) || 0;
+                    const itemTotalPriceVal = Number(item.totalPrice) || ((Number(item.width)||0) * (Number(item.height)||0) * (Number(item.totalFaces)||0) * pricePerMeterVal);
+                    const totalAreaForFaces = (Number(item.area)||0) * (Number(item.totalFaces)||0);
 
                     return `
                       <tr class="${isEmpty ? 'empty-row' : ''}">
@@ -861,7 +864,7 @@ export default function ModernPrintInvoiceDialog({
         // ensure printWindow variable from above or open new window
         printWindow = printWindow || window.open('', '_blank', windowFeatures);
         if (!printWindow) {
-          throw new Error('فشل في فتح نافذة الطباعة. يرجى التحقق من إعدادات المتصفح والسماح بالنوافذ المنبثقة.');
+          throw new Error('فشل في فتح نافذة الطب��عة. يرجى التحقق من إعدادات المتصفح والسماح بالنوافذ المنبثقة.');
         }
 
         // ✅ تعيين عنوان النافذة مع معلومات العميل والعقود والتاريخ
