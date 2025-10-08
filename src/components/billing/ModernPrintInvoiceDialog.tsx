@@ -127,7 +127,7 @@ export default function ModernPrintInvoiceDialog({
   const [sizeOrderMap, setSizeOrderMap] = useState<{ [key: string]: number }>({});
   const [sizeDimensionsMap, setSizeDimensionsMap] = useState<{ [key: string]: { width: number; height: number } }>({});
 
-  // ✅ جلب بيانات الأحجام ��ن قا��دة البيانات مع الأبعاد
+  // ✅ جلب بيانات الأحجام من قا��دة البيانات مع الأبعاد
   const fetchSizeData = async () => {
     try {
       const { data: sizesData, error } = await supabase
@@ -498,6 +498,41 @@ export default function ModernPrintInvoiceDialog({
           } as any);
         }
 
+        // If this is a customer copy (not a printer copy), use the centralized HTML generator with prices
+        const isPrinterCopy = !!autoPrintForPrinter || !!printForPrinter;
+        const moneySubtotal = localPrintItems.reduce((s, it) => s + ((Number(it.width)||0) * (Number(it.height)||0) * (Number(it.totalFaces)||0) * (Number(it.pricePerMeter)||0)), 0);
+        if (!isPrinterCopy) {
+          const itemsForGenerator = displayItems.map(it => ({
+            size: it.size || '',
+            quantity: it.quantity || 0,
+            faces: it.faces || 0,
+            totalFaces: it.totalFaces || 0,
+            width: it.width || 0,
+            height: it.height || 0,
+            area: it.area || 0,
+            pricePerMeter: it.pricePerMeter || 0,
+            totalPrice: it.totalPrice || 0,
+          }));
+
+          const html = generateModernPrintInvoiceHTML({
+            invoiceNumber,
+            invoiceType: 'فاتورة طباعة',
+            invoiceDate,
+            customerName,
+            items: itemsForGenerator,
+            totalAmount: moneySubtotal,
+            notes,
+            printerName: 'web',
+            hidePrices: false,
+          });
+
+          printWindow.document.open();
+          printWindow.document.write(html);
+          printWindow.document.close();
+          toast.success(`تم فتح الفاتورة للطباعة بنجاح بعملة ${currency.name}!`);
+          return;
+        }
+
         const htmlContent = `
           <!DOCTYPE html>
           <html dir="rtl" lang="ar">
@@ -781,7 +816,7 @@ export default function ModernPrintInvoiceDialog({
                       <tr class="${isEmpty ? 'empty-row' : ''}">
                         <td>${isEmpty ? '' : index + 1}</td>
                         <td style="text-align: right; padding-right: 8px;">
-                          ${isEmpty ? '' : `لوح�� إعلا��ية مقاس ${item.size}`}
+                          ${isEmpty ? '' : `لوحة إعلا��ية مقاس ${item.size}`}
                         </td>
                         <td>${isEmpty ? '' : (typeof item.quantity === 'number' ? formatArabicNumber(item.quantity) : item.quantity)}</td>
                         <td>${isEmpty ? '' : (typeof item.faces === 'number' ? item.faces : item.faces)}</td>
@@ -801,7 +836,7 @@ export default function ModernPrintInvoiceDialog({
                     <span>${formatArabicNumber(subtotal)} وحدة</span>
                   </div>
                   <div class="total-row discount">
-                    <span>خ��م (${discountType === 'percentage' ? `${discount}%` : `${formatArabicNumber(discount)} وحدة`}):</span>
+                    <span>خصم (${discountType === 'percentage' ? `${discount}%` : `${formatArabicNumber(discount)} وحدة`}):</span>
                     <span>- ${formatArabicNumber(discountAmount)} وحدة</span>
                   </div>
                 ` : ''}
@@ -955,7 +990,7 @@ export default function ModernPrintInvoiceDialog({
         <h3 className="expenses-preview-label mb-3 text-lg">بيانات العميل</h3>
         <div className="text-sm space-y-1">
           <div><strong>الاسم:</strong> {customerName}</div>
-          <div><strong>العقود المرتبط���:</strong> {selectedContracts.join(', ')}</div>
+          <div><strong>العقود المرتبط��:</strong> {selectedContracts.join(', ')}</div>
           <div><strong>تاريخ الفاتورة:</strong> {new Date(invoiceDate).toLocaleDateString('ar-LY')}</div>
         </div>
       </div>
@@ -999,7 +1034,7 @@ export default function ModernPrintInvoiceDialog({
           <div className="flex justify-end">
             <div className="w-[400px]">
               <div className="flex justify-between py-2 text-sm">
-                <span>إجمالي الأو��ه:</span>
+                <span>إجمالي الأوجه:</span>
                 <span className="expenses-amount-calculated font-bold">{formatArabicNumber(subtotal)} وحدة</span>
               </div>
 
