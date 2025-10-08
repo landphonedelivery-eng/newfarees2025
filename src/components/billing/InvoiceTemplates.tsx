@@ -140,7 +140,6 @@ export const generateModernPrintInvoiceHTML = (data: ModernPrintInvoiceData): st
             <th>إجمالي الأوجه</th>
             <th>الأبعاد (م)</th>
             <th>المساحة/الوجه</th>
-            ${data.hidePrices ? '' : '<th>سعر المتر</th><th>إجمالي السعر</th>'}
           </tr>
         </thead>
         <tbody>
@@ -148,7 +147,16 @@ export const generateModernPrintInvoiceHTML = (data: ModernPrintInvoiceData): st
         </tbody>
       </table>
 
-      ${data.hidePrices ? '' : `
+      ${data.hidePrices ? `
+      <div class="totals">
+        <div class="box">
+          <div style="display:flex;justify-content:space-between;font-weight:700;font-size:16px">
+            <div>إجمالي الأوجه:</div>
+            <div style="direction:ltr">${Number(data.totalAmount || 0).toLocaleString('ar-LY')} وحدة</div>
+          </div>
+        </div>
+      </div>
+      ` : `
       <div class="totals">
         <div class="box">
           <div style="display:flex;justify-content:space-between;font-weight:700;font-size:16px">

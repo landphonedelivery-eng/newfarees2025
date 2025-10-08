@@ -19,6 +19,7 @@ import {
   Save,
   X
 } from 'lucide-react';
+import { generateModernPrintInvoiceHTML } from './InvoiceTemplates';
 
 interface PrintItem {
   size: string;
@@ -49,6 +50,7 @@ interface ContractRow {
 interface ModernPrintInvoiceDialogProps {
   open: boolean;
   onClose: () => void;
+  customerId?: string | null;
   customerName: string;
   contracts: ContractRow[];
   selectedContracts: string[];
@@ -61,11 +63,16 @@ interface ModernPrintInvoiceDialogProps {
   accountPayments: number;
   onPrintInvoice: () => void;
   onSaveInvoice: () => void;
+  // New props for loading/saving existing invoices and auto-printing
+  initialInvoice?: any | null;
+  openToPreview?: boolean;
+  autoPrint?: boolean;
+  autoPrintForPrinter?: boolean;
 }
 
 const CURRENCIES = [
   { code: 'LYD', name: 'دينار ليبي', symbol: 'د.ل', writtenName: 'دينار ليبي' },
-  { code: 'USD', name: 'دولار أمريكي', symbol: '$', writtenName: 'دولار أمريكي' },
+  { code: 'USD', name: 'دولار أمريكي', symbol: '$', writtenName: 'دو��ار أمريكي' },
   { code: 'EUR', name: 'يورو', symbol: '€', writtenName: 'يورو' },
 ];
 
@@ -90,6 +97,7 @@ const formatArabicNumber = (num: number): string => {
 export default function ModernPrintInvoiceDialog({
   open,
   onClose,
+  customerId,
   customerName,
   contracts,
   selectedContracts,
@@ -101,7 +109,11 @@ export default function ModernPrintInvoiceDialog({
   onIncludeAccountBalance,
   accountPayments,
   onPrintInvoice,
-  onSaveInvoice
+  onSaveInvoice,
+  initialInvoice,
+  openToPreview,
+  autoPrint,
+  autoPrintForPrinter
 }: ModernPrintInvoiceDialogProps) {
   const [activeTab, setActiveTab] = useState<'setup' | 'preview'>('setup');
   const [currency, setCurrency] = useState(CURRENCIES[0]);
@@ -110,12 +122,13 @@ export default function ModernPrintInvoiceDialog({
   const [notes, setNotes] = useState('');
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
-  
+  const [invoiceType, setInvoiceType] = useState<'print_only' | 'print_install' | 'install_only'>('print_only');
+
   const [localPrintItems, setLocalPrintItems] = useState<PrintItem[]>([]);
   const [sizeOrderMap, setSizeOrderMap] = useState<{ [key: string]: number }>({});
   const [sizeDimensionsMap, setSizeDimensionsMap] = useState<{ [key: string]: { width: number; height: number } }>({});
 
-  // ✅ جلب بيانات الأحجام من قاعدة البيانات مع الأبعاد
+  // ✅ جلب بيانات الأحجام من قا��دة ال��يانات مع الأبعاد
   const fetchSizeData = async () => {
     try {
       const { data: sizesData, error } = await supabase
@@ -146,60 +159,122 @@ export default function ModernPrintInvoiceDialog({
     }
   };
 
-  // ✅ حساب الإجماليات الصحيح
-  const subtotal = useMemo(() => {
-    let calculatedTotal = 0;
-    
+  // ✅ المجموعات: المجموع النقدي وإج��الي الأوجه
+  const moneySubtotal = useMemo(() => {
+    let sum = 0;
     localPrintItems.forEach((item, index) => {
-      // ✅ الحساب الصحيح: العرض × الارتفاع × عدد الأوجه × سعر المتر
-      const width = Number(item.width) || 0;
-      const height = Number(item.height) || 0;
-      const totalFaces = Number(item.totalFaces) || 0;
-      const pricePerMeter = Number(item.pricePerMeter) || 0;
-      
-      const itemTotal = width * height * totalFaces * pricePerMeter;
-      
-      console.log(`Item ${index} (${item.size}): ${width} × ${height} × ${totalFaces} × ${pricePerMeter} = ${itemTotal}`);
-      
-      if (!isNaN(itemTotal) && itemTotal > 0) {
-        calculatedTotal += itemTotal;
-      }
+      const itemTotal = Number(item.totalPrice) || ((Number(item.width) || 0) * (Number(item.height) || 0) * (Number(item.totalFaces) || 0) * (Number(item.pricePerMeter) || 0));
+      sum += itemTotal;
+      console.log(`Item ${index} (${item.size}): totalPrice = ${itemTotal}`);
     });
-    
-    console.log('Final subtotal calculated:', calculatedTotal);
-    return calculatedTotal;
+    console.log('Final monetary subtotal calculated:', sum);
+    return sum;
   }, [localPrintItems]);
 
+  const facesTotal = useMemo(() => {
+    return localPrintItems.reduce((s, it) => s + (Number(it.totalFaces) || 0), 0);
+  }, [localPrintItems]);
+
+  // Discount interpreted as percentage or fixed monetary amount
   const discountAmount = useMemo(() => {
     if (discountType === 'percentage') {
-      return (subtotal * discount) / 100;
+      return Math.round((moneySubtotal * discount) / 100);
     }
-    return discount;
-  }, [subtotal, discount, discountType]);
+    return Number(discount) || 0;
+  }, [moneySubtotal, discount, discountType]);
 
   const total = useMemo(() => {
-    let finalTotal = subtotal - discountAmount;
-    if (includeAccountBalance && accountPayments > 0) {
-      finalTotal -= accountPayments;
+    let finalTotal = moneySubtotal - discountAmount;
+    // includeAccountBalance and accountPayments are monetary; account balance can be applied if needed
+    if (includeAccountBalance && accountPayments) {
+      finalTotal = finalTotal - Number(accountPayments || 0);
     }
     return Math.max(0, finalTotal);
-  }, [subtotal, discountAmount, includeAccountBalance, accountPayments]);
+  }, [moneySubtotal, discountAmount, includeAccountBalance, accountPayments]);
 
   useEffect(() => {
     if (open) {
-      setActiveTab('setup');
-      const timestamp = Date.now();
-      const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-      setInvoiceNumber(`INV-${timestamp}${randomSuffix}`);
-      setInvoiceDate(new Date().toISOString().slice(0, 10));
-      setNotes('');
-      setDiscount(0);
-      setLocalPrintItems([]);
-      
-      // ✅ جلب بيانات الأحجام عند فتح النافذة
+      // If an initial invoice is provided (editing a saved invoice), populate fields from it
+      if (initialInvoice) {
+        try {
+          const inv = initialInvoice as any;
+          console.log('ModernPrintInvoiceDialog: initialInvoice received:', inv);
+          // parse print items from multiple possible fields (print_items, print_items_json, items, items_json)
+          let items: any[] = [];
+          const possible = inv.print_items ?? inv.print_items_json ?? inv.items ?? inv.items_json ?? null;
+
+          console.log('ModernPrintInvoiceDialog: possible items field:', possible ? typeof possible : 'none');
+
+          if (possible) {
+            try {
+              if (typeof possible === 'string') {
+                const parsed = JSON.parse(possible);
+                if (Array.isArray(parsed)) items = parsed;
+              } else if (Array.isArray(possible)) {
+                items = possible;
+              } else if (Array.isArray(inv.items)) {
+                items = inv.items;
+              }
+            } catch (e) {
+              console.warn('Failed to parse invoice items from initialInvoice', e);
+              items = [];
+            }
+          }
+
+          const mapped = (items || []).map((it:any) => ({
+            size: it.size || it.name || '',
+            quantity: Number(it.quantity ?? it.qty ?? 0) || 0,
+            faces: Number(it.faces ?? it.face_count ?? it.Number_of_Faces ?? 0) || 0,
+            totalFaces: Number(it.totalFaces ?? it.total_faces ?? 0) || 0,
+            area: Number((it.area ?? it.area_m2 ?? (Number(it.width || 0) * Number(it.height || 0))) || 0) || 0,
+            pricePerMeter: Number((it.pricePerMeter ?? it.print_price ?? it.price) || 0) || 0,
+            totalArea: Number((it.totalArea ?? it.total_area ?? 0) || 0) || 0,
+            totalPrice: Number((it.totalPrice ?? it.total_price ?? it.price_total) || 0) || 0,
+            sortOrder: Number(it.sortOrder ?? it.sort_order ?? 0) || 0,
+            width: Number(it.width || it.w || 0) || 0,
+            height: Number(it.height || it.h || 0) || 0,
+          }));
+
+          console.log('ModernPrintInvoiceDialog: parsed items count:', mapped.length, mapped);
+
+          setLocalPrintItems(mapped);
+
+          if (inv.invoice_number) setInvoiceNumber(inv.invoice_number);
+          if (inv.invoice_date) setInvoiceDate(typeof inv.invoice_date === 'string' ? inv.invoice_date.slice(0,10) : new Date(inv.invoice_date).toISOString().slice(0,10));
+          setNotes(inv.notes || '');
+          if (inv.currency) {
+            const found = CURRENCIES.find(c => c.code === inv.currency || c.name === inv.currency);
+            if (found) setCurrency(found);
+          }
+          if (typeof inv.discount === 'number') setDiscount(inv.discount);
+          if (inv.discount_type === 'fixed' || inv.discount_type === 'percentage') setDiscountType(inv.discount_type);
+
+          // If contract_numbers provided, set selected contracts via callback
+          if (inv.contract_numbers && onSelectContracts) {
+            if (Array.isArray(inv.contract_numbers)) onSelectContracts(inv.contract_numbers.map(String));
+            else if (typeof inv.contract_numbers === 'string') onSelectContracts(inv.contract_numbers.split(',').map((s:string)=>s.trim()));
+          }
+
+          // open preview tab if requested
+          if (openToPreview) setActiveTab('preview');
+        } catch (e) {
+          console.warn('Failed to parse initial invoice', e);
+        }
+      } else {
+        setActiveTab('setup');
+        const timestamp = Date.now();
+        const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        setInvoiceNumber(`INV-${timestamp}${randomSuffix}`);
+        setInvoiceDate(new Date().toISOString().slice(0, 10));
+        setNotes('');
+        setDiscount(0);
+        setLocalPrintItems([]);
+      }
+
+      // Always fetch size data (dimensions)
       fetchSizeData();
     }
-  }, [open]);
+  }, [open, initialInvoice]);
 
   const getBillboardsFromContracts = async (contractNumbers: string[]) => {
     if (contractNumbers.length === 0) {
@@ -262,7 +337,7 @@ export default function ModernPrintInvoiceDialog({
 
     } catch (error) {
       console.error('Error fetching billboards from contracts:', error);
-      toast.error('حدث خطأ في جلب بيانات اللوحات');
+      toast.error('حدث خطأ في جلب بي��نات اللوحات');
       setLocalPrintItems([]);
     }
   };
@@ -275,7 +350,7 @@ export default function ModernPrintInvoiceDialog({
       const size = String(billboard.Size ?? billboard.size ?? 'غير محدد');
       const faces = Number(billboard.Faces ?? billboard.faces ?? billboard.Number_of_Faces ?? billboard.Faces_Count ?? billboard.faces_count ?? 1);
       
-      // ✅ جلب الأبعاد من قاعدة البيانات
+      // ✅ جلب الأبعاد م�� قاعدة البيانات
       const dimensions = sizeDimensionsMap[size];
       const width = dimensions?.width || 0;
       const height = dimensions?.height || 0;
@@ -305,7 +380,7 @@ export default function ModernPrintInvoiceDialog({
       groupedBillboards[groupKey].totalArea += area;
     });
 
-    // ✅ حساب الأسعار الإجمالية وترتيب النتائج
+    // ✅ حساب الأسعار الإج��الية وترتيب النتائج
     const result = Object.values(groupedBillboards).map(item => {
       // ✅ الحساب الصحيح: العرض × الارتفاع × عدد الأوجه × سعر المتر
       const calculatedPrice = item.width * item.height * item.totalFaces * item.pricePerMeter;
@@ -325,10 +400,11 @@ export default function ModernPrintInvoiceDialog({
   };
 
   useEffect(() => {
-    if (open && Object.keys(sizeDimensionsMap).length > 0) {
+    // If we're editing an existing saved invoice (initialInvoice), do not override its items
+    if (open && Object.keys(sizeDimensionsMap).length > 0 && !initialInvoice) {
       getBillboardsFromContracts(selectedContracts);
     }
-  }, [selectedContracts, open, contracts, sizeDimensionsMap]);
+  }, [selectedContracts, open, contracts, sizeDimensionsMap, initialInvoice]);
 
   const handleContractToggle = (contractNumber: string) => {
     const isSelected = selectedContracts.includes(contractNumber);
@@ -361,7 +437,7 @@ export default function ModernPrintInvoiceDialog({
       item.totalArea = item.area * item.totalFaces;
     }
     
-    // ✅ الحساب الصحيح: العرض × الارتفاع × عدد الأوجه × سعر المتر
+    // ✅ الحساب الصحيح: العرض × الارتفاع × ��دد الأوج�� × سعر المتر
     item.totalPrice = item.width * item.height * item.totalFaces * item.pricePerMeter;
     
     updatedItems[index] = item;
@@ -383,18 +459,18 @@ export default function ModernPrintInvoiceDialog({
     setLocalPrintItems(updatedItems);
   };
 
-  const handlePrint = () => {
+  const handlePrint = (isPrinterCopyParam: boolean = false) => {
     if (localPrintItems.length === 0) {
       toast.error('لا توجد عناصر للطباعة');
       return;
     }
 
-    // ✅ استخدام نفس تصميم الفاتورة من الكود المرجعي
+    // ✅ استخدام نفس تصميم الفاتور�� من الكود المرجعي
     const printInvoice = async () => {
       try {
         const testWindow = window.open('', '_blank', 'width=1,height=1');
         if (!testWindow || testWindow.closed || typeof testWindow.closed === 'undefined') {
-          toast.error('يرجى السماح بالنوافذ المنبثقة في المتصفح لتمكين الطباعة');
+          toast.error('ي��جى السماح بالنوافذ المنبثقة في المتصفح لتمكين الطباعة');
           return;
         }
         testWindow.close();
@@ -403,12 +479,14 @@ export default function ModernPrintInvoiceDialog({
         const currentDate = new Date(invoiceDate);
         const formattedDate = currentDate.toLocaleDateString('ar-LY');
         
-        // ✅ إنشاء اسم الملف مع معلومات العميل والعقود والتاريخ
+        // ✅ إنشاء اسم الملف مع معلومات العميل و العقود والتاريخ
         const contractsList = selectedContracts.join('-');
         const dateFormatted = currentDate.toISOString().slice(0, 10).replace(/-/g, '_');
         const customerNameForFile = customerName.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '_');
-        const fileName = `فاتورة_طباعة_${customerNameForFile}_عقود_${contractsList}_${dateFormatted}`;
-        
+        const invoiceTypeText = invoiceType === 'print_only' ? 'طباعة فقط' : invoiceType === 'print_install' ? 'طباعة وتركيب' : 'تركيب فقط';
+        const invoiceTypeCode = invoiceType === 'print_only' ? 'print' : invoiceType === 'print_install' ? 'print_install' : 'install';
+        const fileName = `فاتورة_${invoiceTypeCode}_${customerNameForFile}_عقود_${contractsList}_${dateFormatted}`;
+
         // ✅ إعداد عناصر الجدول مع صفوف ثابتة
         const FIXED_ROWS = 10;
         const displayItems = [...localPrintItems];
@@ -427,6 +505,15 @@ export default function ModernPrintInvoiceDialog({
             height: ''
           } as any);
         }
+
+        // Determine whether this print should be printer-only (faces) or customer (with prices)
+        const isPrinterCopy = Boolean(isPrinterCopyParam);
+        const moneySubtotal = localPrintItems.reduce((s, it) => s + ((Number(it.width)||0) * (Number(it.height)||0) * (Number(it.totalFaces)||0) * (Number(it.pricePerMeter)||0)), 0);
+
+        const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no';
+        let printWindow: Window | null = null;
+
+        const tableHeaderExtra = isPrinterCopy ? '' : `<th style="width: 12%">سعر المتر</th><th style="width: 12%">السعر الإجمالي</th>`;
 
         const htmlContent = `
           <!DOCTYPE html>
@@ -673,9 +760,9 @@ export default function ModernPrintInvoiceDialog({
                 </div>
                 
                 <div class="invoice-info">
-                  <div class="invoice-title">INVOICE</div>
+                  <div class="invoice-title">${invoiceTypeText || 'INVOICE'}</div>
                   <div class="invoice-details">
-                    رقم الفاتورة: ${invoiceNumber}<br>
+                    رقم ��لفاتورة: ${invoiceNumber}<br>
                     التاريخ: ${formattedDate}<br>
                     العملة: ${currency.name}
                   </div>
@@ -686,7 +773,7 @@ export default function ModernPrintInvoiceDialog({
                 <div class="customer-title">بيانات العميل</div>
                 <div class="customer-details">
                   <strong>الاسم:</strong> ${customerName}<br>
-                  <strong>العقود المرتبطة:</strong> ${selectedContracts.join(', ')}<br>
+                  <strong>العقود المرتبط��:</strong> ${selectedContracts.join(', ')}<br>
                   <strong>تاريخ الفاتورة:</strong> ${formattedDate}
                 </div>
               </div>
@@ -695,66 +782,73 @@ export default function ModernPrintInvoiceDialog({
                 <thead>
                   <tr>
                     <th style="width: 6%">#</th>
-                    <th style="width: 24%">المقاس</th>
-                    <th style="width: 8%">عدد اللوحات</th>
-                    <th style="width: 8%">أوجه/لوحة</th>
-                    <th style="width: 8%">إجمالي الأوجه</th>
-                    <th style="width: 10%">الأبعاد (م)</th>
+                    <th style="width: 30%">المقاس</th>
+                    <th style="width: 12%">عدد اللوحات</th>
+                    <th style="width: 12%">أوجه/لوحة</th>
+                    <th style="width: 12%">إجمالي الأوجه</th>
+                    <th style="width: 18%">الأبعاد (م)</th>
                     <th style="width: 10%">مساحة الأوجه (م²)</th>
-                    <th style="width: 10%">سعر المتر</th>
-                    <th style="width: 16%">إجمالي السعر</th>
+                    ${!isPrinterCopy ? `<th style="width:12%">سعر المتر (${currency.symbol})</th><th style="width:12%">السعر الإجمالي (${currency.symbol})</th>` : ''}
                   </tr>
                 </thead>
                 <tbody>
                   ${displayItems.map((item, index) => {
                     const isEmpty = !item.size;
-                    
+                    const pricePerMeterVal = Number(item.pricePerMeter) || 0;
+                    const itemTotalPriceVal = Number(item.totalPrice) || ((Number(item.width)||0) * (Number(item.height)||0) * (Number(item.totalFaces)||0) * pricePerMeterVal);
+                    const totalAreaForFaces = (Number(item.area)||0) * (Number(item.totalFaces)||0);
+
                     return `
                       <tr class="${isEmpty ? 'empty-row' : ''}">
                         <td>${isEmpty ? '' : index + 1}</td>
                         <td style="text-align: right; padding-right: 8px;">
-                          ${isEmpty ? '' : `لوحة إعلانية مقاس ${item.size}`}
+                          ${isEmpty ? '' : `لوحة إعلا��ية مقاس ${item.size}`}
                         </td>
                         <td>${isEmpty ? '' : (typeof item.quantity === 'number' ? formatArabicNumber(item.quantity) : item.quantity)}</td>
                         <td>${isEmpty ? '' : (typeof item.faces === 'number' ? item.faces : item.faces)}</td>
                         <td>${isEmpty ? '' : (typeof item.totalFaces === 'number' ? formatArabicNumber(item.totalFaces) : item.totalFaces)}</td>
                         <td>${isEmpty ? '' : (typeof item.width === 'number' && typeof item.height === 'number' ? `${item.width} × ${item.height}` : '')}</td>
-                        <td>${isEmpty ? '' : (typeof item.area === 'number' && typeof item.totalFaces === 'number' ? `${(item.area * item.totalFaces).toFixed(2)} م²` : item.area)}</td>
-                        <td>${isEmpty ? '' : (typeof item.pricePerMeter === 'number' ? `${formatArabicNumber(item.pricePerMeter)} ${currency.symbol}` : item.pricePerMeter)}</td>
-                        <td>${isEmpty ? '' : (typeof item.totalPrice === 'number' ? `${formatArabicNumber(item.totalPrice)} ${currency.symbol}` : item.totalPrice)}</td>
+                        <td>${isEmpty ? '' : `${totalAreaForFaces.toFixed(2)} م²`}</td>
+                        ${!isPrinterCopy ? `<td>${isEmpty ? '' : formatArabicNumber(pricePerMeterVal)} ${currency.symbol}</td><td>${isEmpty ? '' : formatArabicNumber(itemTotalPriceVal)} ${currency.symbol}</td>` : ''}
                       </tr>
                     `;
                   }).join('')}
                 </tbody>
               </table>
-              
+
               <div class="total-section">
-                ${discount > 0 ? `
+                ${facesTotal > 0 ? `
+                  <div class="total-row subtotal">
+                    <span>��جمالي الأوجه:</span>
+                    <span>${formatArabicNumber(facesTotal)} وحدة</span>
+                  </div>
+                ` : ''}
+
+                ${!isPrinterCopy && moneySubtotal > 0 ? `
                   <div class="total-row subtotal">
                     <span>المجموع الفرعي:</span>
-                    <span>${formatArabicNumber(subtotal)} ${currency.symbol}</span>
+                    <span>${formatArabicNumber(moneySubtotal)} ${currency.symbol}</span>
                   </div>
+                ` : ''}
+
+                ${!isPrinterCopy && discount > 0 ? `
                   <div class="total-row discount">
                     <span>خصم (${discountType === 'percentage' ? `${discount}%` : `${formatArabicNumber(discount)} ${currency.symbol}`}):</span>
                     <span>- ${formatArabicNumber(discountAmount)} ${currency.symbol}</span>
                   </div>
                 ` : ''}
-                
-                ${includeAccountBalance && accountPayments > 0 ? `
-                  <div class="total-row discount">
-                    <span>رصيد الحساب:</span>
-                    <span>- ${formatArabicNumber(accountPayments)} ${currency.symbol}</span>
+
+                ${isPrinterCopy ? `
+                  <div class="total-row grand-total">
+                    <span>العدد النهائي للأوجه:</span>
+                    <span class="currency">${formatArabicNumber(facesTotal)} وحدة</span>
                   </div>
-                ` : ''}
-                
-                <div class="total-row grand-total">
-                  <span>المجموع الإجمالي:</span>
-                  <span class="currency">${formatArabicNumber(total)} ${currency.symbol}</span>
-                </div>
-                
-                <div style="margin-top: 15px; font-size: 13px; color: #666; text-align: center;">
-                  المبلغ بالكلمات: ${formatArabicNumber(total)} ${currency.writtenName}
-                </div>
+                ` : `
+                  <div class="total-row grand-total">
+                    <span>الإجمالي النهائي:</span>
+                    <span class="currency">${formatArabicNumber(total)} ${currency.symbol}</span>
+                  </div>
+                `}
               </div>
               
               <div class="footer">
@@ -775,11 +869,10 @@ export default function ModernPrintInvoiceDialog({
           </html>
         `;
 
-        const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no';
-        const printWindow = window.open('', '_blank', windowFeatures);
-
+        // ensure printWindow variable from above or open new window
+        printWindow = printWindow || window.open('', '_blank', windowFeatures);
         if (!printWindow) {
-          throw new Error('فشل في فتح نافذة الطباعة. يرجى التحقق من إعدادات المتصفح والسماح بالنوافذ المنبثقة.');
+          throw new Error('فشل في فتح نافذة الطب��عة. يرجى التحقق من إعدادات المتصفح والسماح بالنوافذ المنبثقة.');
         }
 
         // ✅ تعيين عنوان النافذة مع معلومات العميل والعقود والتاريخ
@@ -789,11 +882,11 @@ export default function ModernPrintInvoiceDialog({
         printWindow.document.write(htmlContent);
         printWindow.document.close();
 
-        toast.success(`تم فتح الفاتورة للطباعة بنجاح بعملة ${currency.name}!`);
+        toast.success(`تم فتح الفاتورة للطباعة بنجاح بع��لة ${currency.name}!`);
 
       } catch (error) {
         console.error('Error in print invoice:', error);
-        const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
+        const errorMessage = error instanceof Error ? error.message : 'خطأ غير م��روف';
         toast.error(`حدث خطأ أثناء تحضير الفاتورة للطباعة: ${errorMessage}`);
       }
     };
@@ -801,12 +894,77 @@ export default function ModernPrintInvoiceDialog({
     printInvoice();
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (localPrintItems.length === 0) {
       toast.error('لا توجد عناصر للحفظ');
       return;
     }
-    onSaveInvoice();
+
+    // contract_number is required by DB
+    if (!selectedContracts || selectedContracts.length === 0) {
+      toast.error('يرجى اختيار عقد واحد على الأقل لحفظ الفاتورة');
+      return;
+    }
+
+    try {
+      // Use computed subtotal/discount/total from component state
+      const subtotalValue = Number(moneySubtotal) || 0;
+      const discountAmountValue = Number(discountAmount) || 0;
+      const totalValue = Number(total) || 0;
+
+      const firstContractNumber = Number(selectedContracts[0]);
+      if (isNaN(firstContractNumber)) {
+        toast.error('رقم العقد المختار غير صالح.');
+        return;
+      }
+
+      // Ensure invoice number exists
+      if (!invoiceNumber) {
+        const timestamp = Date.now();
+        const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        setInvoiceNumber(`INV-${timestamp}${randomSuffix}`);
+      }
+
+      const payload: any = {
+        contract_number: firstContractNumber,
+        invoice_number: invoiceNumber || `INV-${Date.now()}`,
+        customer_id: customerId ?? null,
+        customer_name: customerName ?? null,
+        printer_name: 'web', // required not null in DB
+        invoice_date: invoiceDate || new Date().toISOString().slice(0,10),
+        subtotal: subtotalValue,
+        discount: Number(discount) || 0,
+        discount_type: discountType === 'percentage' ? 'percentage' : 'fixed',
+        discount_amount: discountAmountValue,
+        total: totalValue,
+        total_amount: totalValue,
+        items: localPrintItems, // stored in jsonb column
+        print_items: JSON.stringify(localPrintItems),
+        contract_numbers: selectedContracts && selectedContracts.length > 0 ? selectedContracts.join(',') : null,
+        notes: notes || '',
+        currency_code: currency?.code || null,
+        currency_symbol: currency?.symbol || null,
+        include_account_balance: includeAccountBalance ? true : false,
+        invoice_type: (invoiceType === 'print_only' ? 'print' : invoiceType === 'print_install' ? 'print_install' : 'install'),
+        created_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase.from('printed_invoices').insert(payload).select();
+
+      if (error) {
+        console.error('Failed to save printed invoice:', error);
+        const errMsg = (error && (error.message || error.code)) ? `${error.message || error.code}` : JSON.stringify(error);
+        toast.error(`فشل حفظ الفاتورة: ${errMsg}`);
+        return;
+      }
+
+      toast.success('تم حفظ الفاتورة بنجاح');
+      onSaveInvoice();
+    } catch (e: any) {
+      console.error('Error saving printed invoice:', e);
+      const message = e?.message || String(e);
+      toast.error(`خطأ أثناء حفظ الفاتورة: ${message}`);
+    }
   };
 
   const InvoicePreview = () => (
@@ -825,17 +983,17 @@ export default function ModernPrintInvoiceDialog({
           <div className="text-sm text-muted-foreground">
             رقم الفاتورة: {invoiceNumber}<br />
             التاريخ: {new Date(invoiceDate).toLocaleDateString('ar-LY')}<br />
-            العملة: {currency.name}
+            العمل��: {currency.name}
           </div>
         </div>
       </div>
 
       {/* Customer Info */}
       <div className="expenses-preview-item mb-6 p-4 border-r-4 border-primary">
-        <h3 className="expenses-preview-label mb-3 text-lg">بيانات العميل</h3>
+        <h3 className="expenses-preview-label mb-3 text-lg">بيانات ال��ميل</h3>
         <div className="text-sm space-y-1">
           <div><strong>الاسم:</strong> {customerName}</div>
-          <div><strong>العقود المرتبطة:</strong> {selectedContracts.join(', ')}</div>
+          <div><strong>العقود المرتبط��:</strong> {selectedContracts.join(', ')}</div>
           <div><strong>تاريخ الفاتورة:</strong> {new Date(invoiceDate).toLocaleDateString('ar-LY')}</div>
         </div>
       </div>
@@ -854,23 +1012,27 @@ export default function ModernPrintInvoiceDialog({
                   <th className="border border-border p-3 text-center font-bold">إجمالي الأوجه</th>
                   <th className="border border-border p-3 text-center font-bold">الأبعاد (م)</th>
                   <th className="border border-border p-3 text-center font-bold">المساحة/الوجه</th>
-                  <th className="border border-border p-3 text-center font-bold">سعر المتر</th>
-                  <th className="border border-border p-3 text-center font-bold">إجمالي السعر</th>
+                  <th className="border border-border p-3 text-center font-bold">س��ر المتر ({currency.symbol})</th>
+                  <th className="border border-border p-3 text-center font-bold">الإجمالي ({currency.symbol})</th>
                 </tr>
               </thead>
               <tbody>
-                {localPrintItems.map((item, index) => (
-                  <tr key={index} className={index % 2 === 0 ? 'bg-card/50' : 'bg-background'}>
-                    <td className="border border-border p-3 text-center font-medium">{item.size}</td>
-                    <td className="border border-border p-3 text-center">{formatArabicNumber(item.quantity)}</td>
-                    <td className="border border-border p-3 text-center">{formatArabicNumber(item.faces)}</td>
-                    <td className="border border-border p-3 text-center font-medium">{formatArabicNumber(item.totalFaces)}</td>
-                    <td className="border border-border p-3 text-center">{item.width} × {item.height}</td>
-                    <td className="border border-border p-3 text-center">{item.area.toFixed(2)} م²</td>
-                    <td className="border border-border p-3 text-center">{formatArabicNumber(item.pricePerMeter)} {currency.symbol}</td>
-                    <td className="border border-border p-3 text-center expenses-amount-calculated font-bold">{formatArabicNumber(item.totalPrice)} {currency.symbol}</td>
-                  </tr>
-                ))}
+                {localPrintItems.map((item, index) => {
+                  const pricePerMeterVal = Number(item.pricePerMeter) || 0;
+                  const itemTotalPriceVal = Number(item.totalPrice) || ((Number(item.width) || 0) * (Number(item.height) || 0) * (Number(item.totalFaces) || 0) * pricePerMeterVal);
+                  return (
+                    <tr key={index} className={index % 2 === 0 ? 'bg-card/50' : 'bg-background'}>
+                      <td className="border border-border p-3 text-center font-medium">{item.size}</td>
+                      <td className="border border-border p-3 text-center">{formatArabicNumber(item.quantity)}</td>
+                      <td className="border border-border p-3 text-center">{formatArabicNumber(item.faces)}</td>
+                      <td className="border border-border p-3 text-center font-medium">{formatArabicNumber(item.totalFaces)}</td>
+                      <td className="border border-border p-3 text-center">{item.width} × {item.height}</td>
+                      <td className="border border-border p-3 text-center">{(Number(item.area) || 0).toFixed(2)} م²</td>
+                      <td className="border border-border p-3 text-center">{formatArabicNumber(pricePerMeterVal)} {currency.symbol}</td>
+                      <td className="border border-border p-3 text-center font-medium">{formatArabicNumber(itemTotalPriceVal)} {currency.symbol}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -884,9 +1046,9 @@ export default function ModernPrintInvoiceDialog({
             <div className="w-[400px]">
               <div className="flex justify-between py-2 text-sm">
                 <span>المجموع الفرعي:</span>
-                <span className="expenses-amount-calculated font-bold">{formatArabicNumber(subtotal)} {currency.symbol}</span>
+                <span className="expenses-amount-calculated font-bold">{formatArabicNumber(moneySubtotal)} {currency.symbol}</span>
               </div>
-              
+
               {discount > 0 && (
                 <div className="flex justify-between py-2 text-sm text-green-400">
                   <span>خصم ({discountType === 'percentage' ? `${discount}%` : `${formatArabicNumber(discount)} ${currency.symbol}`}):</span>
@@ -894,21 +1056,11 @@ export default function ModernPrintInvoiceDialog({
                 </div>
               )}
 
-              {includeAccountBalance && accountPayments > 0 && (
-                <div className="flex justify-between py-2 text-sm stat-blue">
-                  <span>رصيد الحساب:</span>
-                  <span className="font-bold">- {formatArabicNumber(accountPayments)} {currency.symbol}</span>
-                </div>
-              )}
-
               <div className="flex justify-between py-4 text-xl font-bold bg-primary text-primary-foreground px-6 rounded-lg mt-4">
-                <span>المجموع الإجمالي:</span>
+                <span>الإجمالي ا��نهائي:</span>
                 <span className="text-primary-glow">{formatArabicNumber(total)} {currency.symbol}</span>
               </div>
 
-              <div className="text-center mt-4 text-sm text-muted-foreground">
-                المبلغ بالكلمات: {formatArabicNumber(total)} {currency.writtenName}
-              </div>
             </div>
           </div>
         </div>
@@ -923,7 +1075,7 @@ export default function ModernPrintInvoiceDialog({
       {/* Footer */}
       <div className="mt-8 text-center text-sm text-muted-foreground border-t border-border pt-4">
         شكراً لتعاملكم معنا | Thank you for your business<br />
-        هذه فاتورة إلكترونية ولا تحتاج إلى ختم أو توقيع
+        هذه فاتو��ة إلكترونية ولا تحتاج إلى ختم أو توقيع
       </div>
     </div>
   );
@@ -1029,6 +1181,19 @@ export default function ModernPrintInvoiceDialog({
                     </div>
 
                     <div>
+                      <label className="expenses-form-label mb-2 block text-sm">نوع الفاتورة</label>
+                      <select
+                        value={invoiceType}
+                        onChange={(e) => setInvoiceType(e.target.value as any)}
+                        className="w-full p-3 h-10 border border-border rounded-md text-right bg-input text-foreground text-sm"
+                      >
+                        <option value="print_only">طباعة فقط</option>
+                        <option value="print_install">طباعة وتركيب</option>
+                        <option value="install_only">تركيب فقط</option>
+                      </select>
+                    </div>
+
+                    <div>
                       <label className="expenses-form-label mb-2 block text-sm">ملاحظات</label>
                       <Input
                         value={notes}
@@ -1060,7 +1225,7 @@ export default function ModernPrintInvoiceDialog({
                             onClick={(e) => e.stopPropagation()}
                           />
                           <div className="flex-1">
-                            <div className="expenses-contract-number text-sm">عقد رقم {contract.Contract_Number}</div>
+                            <div className="expenses-contract-number text-sm">ع��د رقم {contract.Contract_Number}</div>
                             <div className="expenses-preview-text text-xs">{contract['Ad Type']}</div>
                           </div>
                           <Badge variant="outline" className="border-primary text-primary text-xs px-2 py-1">
@@ -1071,7 +1236,7 @@ export default function ModernPrintInvoiceDialog({
                     </div>
                     <div className="mt-4 p-3 bg-muted/50 rounded-lg">
                       <p className="text-xs text-muted-foreground">
-                        💡 انقر على أي صف لاختيار العقد، أو انقر على المربع للتحديد المباشر
+                        💡 انقر على أي صف لاختيار العقد، أو ان��ر على المربع للتحديد المباشر
                       </p>
                     </div>
                   </CardContent>
@@ -1129,7 +1294,7 @@ export default function ModernPrintInvoiceDialog({
                       عناصر الطباعة ({localPrintItems.length})
                       {localPrintItems.length > 0 && (
                         <span className="text-sm font-normal text-muted-foreground">
-                          - المجموع: {formatArabicNumber(subtotal)} {currency.symbol}
+                          - المجموع: {formatArabicNumber(moneySubtotal)} {currency.symbol}
                         </span>
                       )}
                     </CardTitle>
@@ -1139,7 +1304,7 @@ export default function ModernPrintInvoiceDialog({
                       <div className="expenses-empty-state py-12">
                         <Calculator className="h-16 w-16 mx-auto mb-4 opacity-50" />
                         <p className="text-lg">لا توجد عقود محددة</p>
-                        <p className="text-sm">يرجى اختيار العقود أولاً لعرض عناصر الطباعة</p>
+                        <p className="text-sm">��رجى اختيار العقود أولاً لعرض عناصر الطباعة</p>
                       </div>
                     ) : localPrintItems.length === 0 ? (
                       <div className="expenses-empty-state py-12">
@@ -1218,7 +1383,7 @@ export default function ModernPrintInvoiceDialog({
                       <div className="space-y-3">
                         <div className="flex justify-between text-sm">
                           <span>المجموع الفرعي:</span>
-                          <span className="expenses-amount-calculated font-bold">{formatArabicNumber(subtotal)} {currency.symbol}</span>
+                          <span className="expenses-amount-calculated font-bold">{formatArabicNumber(moneySubtotal)} {currency.symbol}</span>
                         </div>
                         {discount > 0 && (
                           <div className="flex justify-between text-sm stat-green">
@@ -1269,12 +1434,22 @@ export default function ModernPrintInvoiceDialog({
               حفظ في الحساب
             </Button>
             <Button
-              onClick={handlePrint}
+              onClick={() => handlePrint(false)}
               className="expenses-action-btn bg-gradient-to-r from-primary to-primary-glow text-sm px-6 py-2"
               disabled={localPrintItems.length === 0}
             >
               <Printer className="h-4 w-4" />
-              طباعة الفاتورة
+              طباعة (مع الأسعار)
+            </Button>
+
+            <Button
+              onClick={() => handlePrint(true)}
+              variant="outline"
+              className="expenses-action-btn text-sm px-6 py-2"
+              disabled={localPrintItems.length === 0}
+            >
+              <Printer className="h-4 w-4" />
+              للطابعة (أوجه فقط)
             </Button>
           </div>
         </div>

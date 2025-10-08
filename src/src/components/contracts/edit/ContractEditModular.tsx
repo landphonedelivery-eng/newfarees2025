@@ -6,7 +6,7 @@ import { loadBillboards } from '@/services/billboardService';
 import { addBillboardsToContract, getContractWithBillboards, removeBillboardFromContract, updateContract } from '@/services/contractService';
 import { calculateInstallationCostFromIds } from '@/services/installationService';
 import { getPriceFor, getDailyPriceFor, CustomerType } from '@/data/pricing';
-import { ContractPDFDialog } from '@/components/contract';
+import { ContractPDFDialog } from '@/components/Contract';
 import type { Billboard } from '@/types';
 
 // Import modular components
@@ -363,7 +363,7 @@ export default function ContractEditModular() {
       date.setMonth(date.getMonth() + (index + 1));
     } else if (paymentType === 'شهرين') {
       date.setMonth(date.getMonth() + (index + 1) * 2);
-    } else if (paymentType === 'ثلاثة أشهر') {
+    } else if (paymentType === 'ث��اثة أشهر') {
       date.setMonth(date.getMonth() + (index + 1) * 3);
     } else if (paymentType === 'عند التركيب') {
       date.setDate(date.getDate() + 7);
