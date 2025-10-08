@@ -876,7 +876,7 @@ export default function ModernPrintInvoiceDialog({
               </div>
               
               <div class="footer">
-                شكراً لتعاملكم م��نا | Thank you for your business<br>
+                شكراً لتعاملكم معنا | Thank you for your business<br>
                 هذه فاتورة إلكترونية ولا تحتاج إلى ختم أو توقيع
               </div>
             </div>
@@ -1450,12 +1450,22 @@ export default function ModernPrintInvoiceDialog({
               حفظ في الحساب
             </Button>
             <Button
-              onClick={handlePrint}
+              onClick={() => handlePrint(false)}
               className="expenses-action-btn bg-gradient-to-r from-primary to-primary-glow text-sm px-6 py-2"
               disabled={localPrintItems.length === 0}
             >
               <Printer className="h-4 w-4" />
-              طباعة الفاتورة
+              طباعة (مع الأسعار)
+            </Button>
+
+            <Button
+              onClick={() => handlePrint(true)}
+              variant="outline"
+              className="expenses-action-btn text-sm px-6 py-2"
+              disabled={localPrintItems.length === 0}
+            >
+              <Printer className="h-4 w-4" />
+              للطابعة (أوجه فقط)
             </Button>
           </div>
         </div>
